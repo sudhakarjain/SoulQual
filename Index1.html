@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Brahma Kumaris Forehead Soul Tracker</title>
+  <!-- Load MediaPipe Libraries for Real-Time Face Tracking -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #fef08a; /* Pale yellow background of the original site */
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 100vh;
+      text-align: center;
+    }
+
+    /* --- Header & Branding --- */
+    header {
+      padding: 25px 50px;
+      font-size: 28px;
+      font-weight: bold;
+      color: #854d0e;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      color: #854d0e;
+    }
+    .logo-bk-text { font-size: 24px; font-weight: normal; margin-left: 10px; }
+    
+    /* --- The Rotating Rainbow Text Wheel --- */
+    .rotating-text-wheel {
+      width: 300px;
+      height: 300px;
+      position: absolute;
+      top: -150px; /* Positions above the canvas slightly */
+      left: calc(50% - 150px);
+      border-radius: 50%;
+      overflow: hidden;
+      animation: rotateRainbow 8s linear infinite; /* Speed of the rotation */
+    }
+
+    /* Define the rainbow gradient animation */
+    @keyframes rotateRainbow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* SVG to mask the text, so the rainbow only shows through the letters */
+    .rainbow-text-mask {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: conic-gradient(red, yellow, green, cyan, blue, magenta, red); /* Rainbow background */
+      -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Arial Black' font-size='36' fill='white'%3EKNOWLEDGE PEACE LOVE POWER PURITY%3C/text%3E%3C/svg%3E");
+      mask-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25'%3E%3Ctext x='50%25' y='50%25' dy='.3em' text-anchor='middle' font-family='Arial Black' font-size='36' fill='white'%3EKNOWLEDGE PEACE LOVE POWER PURITY%3C/text%3E%3C/svg%3E");
+      -webkit-mask-size: cover;
+      mask-size: cover;
+      -webkit-mask-repeat: no-repeat;
+      mask-repeat: no-repeat;
+    }
+
+    /* --- Main Body and Video Container --- */
+    main {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative; /* Essential for positioning the wheel */
+    }
+    .video-container {
+      position: relative;
+      width: 720px;
+      height: 540px;
+      border: 6px solid #f97316; /* Orange frame */
+      border-radius: 12px;
+      overflow: visible; /* Allow wheel to poke out top */
+      background: #000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+      z-index: 5; /* Lower than the wheel */
+    }
+    video { display: none; } /* Raw video is hidden, canvas handles display */
+    canvas {
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1); /* Mirror camera feed */
+      position: relative;
+      z-index: 10; /* Ensure forehead star is on top of everything */
+    }
+
+    /* --- RECORD Button (Exactly like the source) --- */
+    .controls {
+      margin-top: 20px;
+      z-index: 15;
+    }
+    button {
+      background-color: #ea580c;
+      color: white;
+      border: none;
+      padding: 14px 40px;
+      font-size: 18px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    button:hover { background-color: #c2410c; }
+
+    /* --- Footer --- */
+    footer {
+      padding: 20px 50px;
+      font-size: 14px;
+      color: #713f12;
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      border-top: 1px solid #d9770633;
+    }
+    .footer-left { font-weight: bold; }
+    .footer-links a { color: #713f12; text-decoration: none; margin-left: 15px; }
+  </style>
+</head>
+<body>
+
+  <!-- EXACT HEADER LAYOUT -->
+  <header>
+    <div class="logo">
+      <!-- Simple SVG version of the sun logo -->
+      <svg width="40" height="40" viewBox="0 0 100 100" fill="#dc2626"><circle cx="50" cy="50" r="10"/><path d="M50 10v30M50 60v30M10 50h30M60 50h30M25 25l20 20M55 55l20 20M25 75l20-20M55 45l20-20" stroke="#dc2626" stroke-width="6"/></svg>
+      <div class="logo-bk-text">BRAHMA KUMARIS</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- THE ROTATING COLOR WHEEL WITH TEXT INSIDE -->
+    <div class="rotating-text-wheel">
+        <div class="rainbow-text-mask"></div>
+    </div>
+
+    <!-- The main mirrored video frame -->
+    <div class="video-container">
+      <video id="webcam" autoplay playsinline></video>
+      <canvas id="output_canvas" width="720" height="540"></canvas>
+    </div>
+
+    <div class="controls">
+      <button id="recordBtn">Record</button>
+    </div>
+  </main>
+
+  <!-- EXACT FOOTER LAYOUT -->
+  <footer>
+    <div class="footer-left">Copyright © 2026 Brahma Kumaris | All Rights Reserved</div>
+    <div class="footer-links">
+        <span>Designed &amp; Developed By Vishkala Venture</span>
+        <a href="#">Terms &amp; Conditions</a> |
+        <a href="#">Privacy Policy</a>
+    </div>
+  </footer>
+
+  <script>
+    const videoElement = document.getElementById('webcam');
+    const canvasElement = document.getElementById('output_canvas');
+    const canvasCtx = canvasElement.getContext('2d');
+
+    // The forehead star graphic (same dynamic tracking as before)
+    function drawSoulStar(ctx, x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+
+      // Radial glow
+      const gradient = ctx.createRadialGradient(0, 0, 2, 0, 0, 70);
+      gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
+      gradient.addColorStop(0.2, 'rgba(255, 230, 150, 0.9)');
+      gradient.addColorStop(0.5, 'rgba(255, 100, 50, 0.5)');
+      gradient.addColorStop(1, 'rgba(255, 0, 0, 0)');
+
+      ctx.fillStyle = gradient;
+      ctx.beginPath();
+      ctx.arc(0, 0, 70, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Light Rays
+      ctx.strokeStyle = 'rgba(255, 255, 200, 0.8)';
+      ctx.lineWidth = 3;
+      for (let i = 0; i < 12; i++) {
+        const angle = (Math.PI / 6) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(angle) * 120, Math.sin(angle) * 120);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    function onResults(results) {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasCtx.drawImage(results.image, 0, 0, canvasElement.width, canvasElement.height);
+
+      if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+        const landmarks = results.multiFaceLandmarks[0];
+        const forehead = landmarks[10]; // Forehead center landmark
+        
+        const x = forehead.x * canvasElement.width;
+        const y = forehead.y * canvasElement.height;
+
+        drawSoulStar(canvasCtx, x, y);
+      }
+      canvasCtx.restore();
+    }
+
+    const faceMesh = new FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+
+    faceMesh.setOptions({
+      maxNumFaces: 1,
+      refineLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+
+    faceMesh.onResults(onResults);
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => { await faceMesh.send({ image: videoElement }); },
+      width: 720, height: 540
+    });
+    camera.start();
+  </script>
+</body>
+</html>
