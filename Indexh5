@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Forehead Soul Light Beam Tracker</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #fdf497; /* Matching warm theme */
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: sans-serif;
+    }
+
+    .container {
+      position: relative;
+      width: 640px;
+      height: 480px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+    }
+
+    video, canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 640px;
+      height: 480px;
+      transform: scaleX(-1); /* Mirror view for natural interaction */
+    }
+
+    #loading {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #333;
+      font-size: 18px;
+      font-weight: bold;
+      z-index: 10;
+    }
+  </style>
+
+  <!-- Load MediaPipe Vision Bundle CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+  <div class="container">
+    <div id="loading">Loading Face Tracker...</div>
+    <video id="webcam" autoplay playsinline></video>
+    <canvas id="outputCanvas" width="640" height="480"></canvas>
+  </div>
+
+  <script>
+    const { FaceLandmarker, FilesetResolver } = vision;
+
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('outputCanvas');
+    const ctx = canvas.getContext('2d');
+    const loadingDiv = document.getElementById('loading');
+
+    let faceLandmarker;
+    let rotationAngle = 0;
+    const qualities = ["Love", "Peace", "Happiness", "Purity", "Power", "Knowledge", "Bliss"];
+
+    // Initialize MediaPipe Face Landmarker
+    async function initLandmarker() {
+      const filesetResolver = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      
+      faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+        baseOptions: {
+          modelAssetPath: `https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task`,
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numFaces: 1
+      });
+
+      loadingDiv.style.display = "none";
+      startWebcam();
+    }
+
+    // Access Webcam Stream
+    async function startWebcam() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+        video.srcObject = stream;
+        video.addEventListener("loadeddata", renderLoop);
+      } catch (err) {
+        loadingDiv.innerText = "Error accessing camera: " + err.message;
+      }
+    }
+
+    // Render Frame Loop
+    async function renderLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (faceLandmarker && video.currentTime > 0) {
+        const results = await faceLandmarker.detectForVideo(video, performance.now());
+
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          // Landmark 151 corresponds to upper forehead / soul point area
+          const foreheadLandmark = results.faceLandmarks[0][151];
+          const x = foreheadLandmark.x * canvas.width;
+          const y = foreheadLandmark.y * canvas.height;
+
+          drawSoulBeams(x, y);
+        }
+      }
+
+      requestAnimationFrame(renderLoop);
+    }
+
+    // Draw Glowing Rotating Beams on Forehead
+    function drawSoulBeams(x, y) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotationAngle);
+
+      const numRays = qualities.length;
+      const angleStep = (Math.PI * 2) / numRays;
+
+      qualities.forEach((text, i) => {
+        const rayAngle = i * angleStep;
+
+        ctx.save();
+        ctx.rotate(rayAngle);
+
+        // Gradient Light Beam
+        const gradient = ctx.createLinearGradient(0, 0, 0, -260);
+        gradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        gradient.addColorStop(0.3, 'rgba(255, 220, 100, 0.6)');
+        gradient.addColorStop(0.7, 'rgba(255, 180, 50, 0.2)');
+        gradient.addColorStop(1, 'rgba(255, 150, 0, 0)');
+
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-30, -260);
+        ctx.lineTo(30, -260);
+        ctx.closePath();
+        ctx.fillStyle = gradient;
+        ctx.fill();
+
+        // Quality Text Label
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        ctx.shadowBlur = 4;
+        ctx.font = 'bold 16px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 0, -160);
+
+        ctx.restore();
+      });
+
+      // Bright Central Soul Point Glow
+      const centerGlow = ctx.createRadialGradient(0, 0, 2, 0, 0, 35);
+      centerGlow.addColorStop(0, '#ffffff');
+      centerGlow.addColorStop(0.4, 'rgba(255, 230, 150, 0.8)');
+      centerGlow.addColorStop(1, 'rgba(255, 180, 50, 0)');
+
+      ctx.beginPath();
+      ctx.arc(0, 0, 35, 0, Math.PI * 2);
+      ctx.fillStyle = centerGlow;
+      ctx.fill();
+
+      ctx.restore();
+
+      // Continuous slow rotation
+      rotationAngle += 0.006;
+    }
+
+    // Launch Application
+    initLandmarker();
+  </script>
+</body>
+</html>
