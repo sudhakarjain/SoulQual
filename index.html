@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>See Your Selfie</title>
+<style>
+:root{--bg:#0d0b1a;--ink:#f3efff;--mute:#a79fc7;box-sizing:border-box}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
+#app{position:relative;height:100%;max-width:720px;margin:0 auto;overflow:hidden}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 20px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
+h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em}
+header p{margin:4px 0 0;color:var(--mute);font-style:italic;font-size:.95rem}
+#msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 32px;color:var(--mute);line-height:1.5}
+#legend{position:absolute;left:0;right:0;bottom:0;padding:24px 12px max(16px,env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
+.chip{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:5px 11px;border-radius:99px;background:#ffffff14}
+.chip i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+#go{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
+#go:focus-visible{outline:3px solid #fff;outline-offset:3px}
+#hint{position:absolute;left:0;right:0;bottom:92px;text-align:center;font-size:.8rem;color:var(--mute);display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="c"></canvas>
+  <header><h1>See Your Selfie</h1><p>See the original virtues shining from the soul.</p></header>
+  <div id="msg">Camera off. Tap Turn on camera and allow access.</div>
+  <button id="go">Turn on camera</button>
+  <div id="hint"></div>
+  <div id="legend"></div>
+</div>
+<video id="v" playsinline muted style="display:none"></video>
+<script>
+const VIRTUES=[["Power","#ff3b30"],["Purity","#ffb020"],["Happiness","#fff3a0"],["Love","#7dff4d"],["Peace","#5ff5e6"],["Bliss","#d67bff"],["Knowledge","#8fa8ff"]];
+document.getElementById("legend").innerHTML=VIRTUES.map(v=>`<span class="chip" style="--c:${v[1]}"><i></i>${v[0]}</span>`).join("");
+
+const cv=document.getElementById("c"),ctx=cv.getContext("2d"),vid=document.getElementById("v");
+const msg=document.getElementById("msg"),go=document.getElementById("go"),hint=document.getElementById("hint");
+let W=0,H=0,live=false,detector=null,busy=false,manual=false;
+// forehead state (screen px), smoothed
+let fx=0,fy=0,fr=40,tx=0,ty=0,tr=40,ready=false;
+
+function resize(){const d=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);
+  if(!ready){tx=fx=W/2;ty=fy=H*.36;tr=fr=Math.min(W,H)*.2}}
+addEventListener("resize",resize);resize();
+
+function geom(){const vw=vid.videoWidth,vh=vid.videoHeight,s=Math.max(W/vw,H/vh);return{vw,vh,s,dx:(W-vw*s)/2,dy:(H-vh*s)/2}}
+const toScreen=(g,p)=>({x:W-(p.x*g.s+g.dx),y:p.y*g.s+g.dy});
+
+let landmarker=null,lastTs=-1;
+async function loadTracker(){
+  const base="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+  const mp=await import(base+"/vision_bundle.mjs");
+  const fileset=await mp.FilesetResolver.forVisionTasks(base+"/wasm");
+  const opts=d=>({baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:d},runningMode:"VIDEO",numFaces:1});
+  try{landmarker=await mp.FaceLandmarker.createFromOptions(fileset,opts("GPU"))}
+  catch(e){landmarker=await mp.FaceLandmarker.createFromOptions(fileset,opts("CPU"))}
+}
+function detect(){
+  if(!landmarker||!live||vid.readyState<2||vid.currentTime===lastTs)return;
+  lastTs=vid.currentTime;
+  let res;try{res=landmarker.detectForVideo(vid,performance.now())}catch(e){return}
+  const L=res.faceLandmarks&&res.faceLandmarks[0];
+  if(!L){return}
+  const g=geom(),P=i=>toScreen(g,{x:L[i].x*g.vw,y:L[i].y*g.vh});
+  const brow=P(9),top=P(10),le=P(33),re=P(263);
+  // center of forehead: between the brows and the hairline
+  tx=brow.x+(top.x-brow.x)*.5;ty=brow.y+(top.y-brow.y)*.5;
+  tr=Math.hypot(le.x-re.x,le.y-re.y);ready=true;
+}
+
+function draw(t){
+  requestAnimationFrame(draw);
+  ctx.clearRect(0,0,W,H);
+  if(live&&vid.videoWidth){
+    const g=geom();ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(vid,g.dx,g.dy,g.vw*g.s,g.vh*g.s);ctx.restore();
+        detect();
+  }else{ctx.fillStyle="#0d0b1a";ctx.fillRect(0,0,W,H)}
+  if(!live)return;
+  fx+=(tx-fx)*.25;fy+=(ty-fy)*.25;fr+=(tr-fr)*.25;
+  orb(fx,fy,fr,t/1000);
+}
+
+const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`};
+const SPARKS=Array.from({length:70},()=>({i:Math.random()*7|0,d:.15+Math.random()*.85,o:(Math.random()-.5),p:Math.random()*6.3,s:1.5+Math.random()*3}));
+const SPEED=.4; // radians per second, clockwise
+function orb(x,y,u,t){
+  const L=u*2.5,Wd=u*.55,base=-Math.PI/2+t*SPEED;
+  ctx.save();ctx.globalCompositeOperation="lighter";
+  VIRTUES.forEach((v,i)=>{
+    const a=base+i*Math.PI*2/7,c=v[1];
+    ctx.save();ctx.translate(x,y);ctx.rotate(a);
+    const g=ctx.createLinearGradient(0,0,L,0);
+    g.addColorStop(0,"rgba(255,255,255,.95)");g.addColorStop(.12,rgba(c,.85));g.addColorStop(.7,rgba(c,.5));g.addColorStop(1,rgba(c,0));
+    // tapered beam: thin at the forehead, wide and soft at the far end
+    ctx.fillStyle=g;ctx.shadowColor=c;ctx.shadowBlur=u*.35;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,-Wd/2);ctx.quadraticCurveTo(L*1.06,0,L,Wd/2);ctx.closePath();ctx.fill();
+    // bright core line
+    ctx.shadowBlur=0;ctx.strokeStyle=g;ctx.lineWidth=Math.max(1,u*.05);
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L*.9,0);ctx.stroke();
+    // label, kept upright on the left half
+    ctx.globalCompositeOperation="source-over";
+    ctx.font=`600 ${Math.max(11,u*.27)}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.shadowColor=c;ctx.shadowBlur=u*.15;ctx.fillStyle="#fff";
+    ctx.translate(L*.62,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
+    ctx.fillText(v[0],0,0);
+    ctx.restore();
+  });
+  // sparkles drifting with the beams
+  SPARKS.forEach(p=>{
+    const a=base+p.i*Math.PI*2/7,tw=.5+.5*Math.sin(t*3+p.p);
+    const lx=p.d*L,ly=p.o*Wd*(.2+p.d),px=x+Math.cos(a)*lx-Math.sin(a)*ly,py=y+Math.sin(a)*lx+Math.cos(a)*ly;
+    ctx.fillStyle=`rgba(255,255,255,${.15+.75*tw})`;ctx.beginPath();ctx.arc(px,py,p.s*tw*u/90,0,7);ctx.fill();
+  });
+  // central star
+  const pulse=1+.12*Math.sin(t*4);
+  const g=ctx.createRadialGradient(x,y,0,x,y,u*.17*pulse);
+  g.addColorStop(0,"#fff");g.addColorStop(.3,"rgba(255,244,210,.7)");g.addColorStop(1,"rgba(255,220,150,0)");
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,u*.17*pulse,0,7);ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=Math.max(1,u*.015);
+  ctx.beginPath();ctx.moveTo(x-u*.09*pulse,y);ctx.lineTo(x+u*.09*pulse,y);ctx.moveTo(x,y-u*.09*pulse);ctx.lineTo(x,y+u*.09*pulse);ctx.stroke();
+  ctx.restore();
+}
+requestAnimationFrame(draw);
+
+// manual placement fallback: drag the light
+let drag=false;
+cv.addEventListener("pointerdown",e=>{if(manual){drag=true;tx=e.offsetX;ty=e.offsetY}});
+cv.addEventListener("pointermove",e=>{if(manual&&drag){tx=e.offsetX;ty=e.offsetY}});
+addEventListener("pointerup",()=>drag=false);
+
+go.onclick=async()=>{
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false});
+    vid.srcObject=s;await vid.play();live=true;go.style.display="none";msg.style.display="none";
+  }catch(e){msg.textContent="Camera unavailable. Allow camera access in your browser settings, then tap Turn on camera again.";return}
+  hint.style.display="block";hint.textContent="Loading face tracking...";
+  try{await loadTracker();hint.style.display="none"}
+  catch(e){manual=true;hint.textContent="Face tracking could not load (check your internet connection). Drag the light to your forehead."}
+};
+</script>
+</body>
+</html>
