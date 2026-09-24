@@ -87,7 +87,7 @@ const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&2
 const SPARKS=Array.from({length:70},()=>({i:Math.random()*7|0,d:.15+Math.random()*.85,o:(Math.random()-.5),p:Math.random()*6.3,s:1.5+Math.random()*3}));
 const SPEED=.4; // radians per second, clockwise
 function orb(x,y,u,t){
-  const L=u*2.5,Wd=u*.55,base=-Math.PI/2+t*SPEED;
+  const L=u*2.1,Wd=u*.5,base=-Math.PI/2+t*SPEED;
   ctx.save();ctx.globalCompositeOperation="lighter";
   VIRTUES.forEach((v,i)=>{
     const a=base+i*Math.PI*2/7,c=v[1];
@@ -102,10 +102,13 @@ function orb(x,y,u,t){
     ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L*.9,0);ctx.stroke();
     // label, kept upright on the left half
     ctx.globalCompositeOperation="source-over";
-    ctx.font=`600 ${Math.max(11,u*.27)}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";
-    ctx.shadowColor=c;ctx.shadowBlur=u*.15;ctx.fillStyle="#fff";
-    ctx.translate(L*.62,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
-    ctx.fillText(v[0],0,0);
+    const fs=Math.max(13,u*.3);
+    ctx.font=`500 ${fs}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";
+    ctx.translate(L*.6,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
+    // mild look: thin soft outline, gentle glow, slightly translucent letters
+    ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=fs*.3;
+    ctx.strokeStyle="rgba(20,12,40,.3)";ctx.lineWidth=fs*.1;ctx.strokeText(v[0],0,0);
+    ctx.shadowColor=c;ctx.shadowBlur=fs*.2;ctx.fillStyle="rgba(255,255,255,.92)";ctx.fillText(v[0],0,0);
     ctx.restore();
   });
   // sparkles drifting with the beams
