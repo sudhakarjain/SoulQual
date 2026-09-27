@@ -7,12 +7,12 @@
 <style>
 :root{--bg:#0d0b1a;--ink:#f3efff;--mute:#a79fc7;box-sizing:border-box}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif}
-#app{position:relative;height:100%;max-width:720px;margin:0 auto;overflow:hidden}
+html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
+#app{position:relative;height:100%;height:100dvh;max-width:720px;margin:0 auto;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 20px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
 h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em}
-header p{margin:4px 0 0;color:var(--mute);font-style:italic;font-size:.95rem}
+header p{margin:4px 0 0;font-style:normal;font-size:1.6rem;font-weight:400;letter-spacing:.02em;color:var(--ink)}
 #msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 32px;color:var(--mute);line-height:1.5}
 #legend{position:absolute;left:0;right:0;bottom:0;padding:24px 12px max(16px,env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
 .chip{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:5px 11px;border-radius:99px;background:#ffffff14}
@@ -20,15 +20,24 @@ header p{margin:4px 0 0;color:var(--mute);font-style:italic;font-size:.95rem}
 #go{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
 #go:focus-visible{outline:3px solid #fff;outline-offset:3px}
 #hint{position:absolute;left:0;right:0;bottom:92px;text-align:center;font-size:.8rem;color:var(--mute);display:none}
+.iconbtn{font:inherit;font-size:1.05rem;line-height:1;color:var(--ink);background:#ffffff1f;border:1px solid #ffffff33;border-radius:50%;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
+.iconbtn:hover{background:#ffffff33}
 </style>
 </head>
 <body>
 <div id="app">
   <canvas id="c"></canvas>
-  <header><h1>See Your Selfie</h1><p>See the original virtues shining from the soul.</p></header>
+  <header><h1>See Your Selfie</h1><p>See the original virtues shining from</p><p>the soul.</p></header>
   <div id="msg">Camera off. Tap Turn on camera and allow access.</div>
   <button id="go">Turn on camera</button>
   <div id="hint"></div>
+  <div id="controls" style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));display:flex;gap:8px;z-index:2">
+    <button id="fsBtn" class="iconbtn" title="Full screen">⛶</button>
+    <button id="capBtn" class="iconbtn" title="Capture photo">📷</button>
+  </div>
+  <label id="gsToggle" style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--mute);background:#ffffff14;padding:6px 10px;border-radius:99px;z-index:2;cursor:pointer">
+    <input type="checkbox" id="greenscreen" style="accent-color:#ffb020">Green screen
+  </label>
   <div id="legend"></div>
 </div>
 <video id="v" playsinline muted style="display:none"></video>
@@ -46,8 +55,80 @@ function resize(){const d=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight
   if(!ready){tx=fx=W/2;ty=fy=H*.36;tr=fr=Math.min(W,H)*.2}}
 addEventListener("resize",resize);resize();
 
-function geom(){const vw=vid.videoWidth,vh=vid.videoHeight,s=Math.max(W/vw,H/vh);return{vw,vh,s,dx:(W-vw*s)/2,dy:(H-vh*s)/2}}
+const ZOOM=.78,RISE=.02; // zoom out a bit; keep the subject low enough to clear the title
+function geom(){const vw=vid.videoWidth,vh=vid.videoHeight,s=Math.max(W/vw,H/vh)*ZOOM;return{vw,vh,s,dx:(W-vw*s)/2,dy:(H-vh*s)/2-H*RISE}}
 const toScreen=(g,p)=>({x:W-(p.x*g.s+g.dx),y:p.y*g.s+g.dy});
+
+// --- virtual background (replaces the real camera background) ---
+const STARS=Array.from({length:90},()=>({x:Math.random(),y:Math.random(),r:.4+Math.random()*1.3,p:Math.random()*6.3,s:.5+Math.random()*1.5}));
+function drawBackground(t){
+  const g=ctx.createRadialGradient(W*.5,H*.32,H*.05,W*.5,H*.65,H*.9);
+  g.addColorStop(0,"#5a2a12");g.addColorStop(.35,"#3d1408");g.addColorStop(.75,"#210a06");g.addColorStop(1,"#0c0402");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  STARS.forEach(st=>{const tw=.5+.5*Math.sin(t*st.s+st.p);ctx.fillStyle=`rgba(255,196,110,${.2+.5*tw})`;ctx.beginPath();ctx.arc(st.x*W,st.y*H,st.r,0,7);ctx.fill()});
+}
+
+// --- person cutout via selfie segmentation, so only you show over the virtual background ---
+let segmenter=null,segReady=false,lastSegTs=-1;
+const maskSmallCanvas=document.createElement("canvas"),maskSmallCtx=maskSmallCanvas.getContext("2d",{willReadFrequently:true});
+const fullCanvas=document.createElement("canvas"),fullCtx=fullCanvas.getContext("2d");
+const maskCanvas=document.createElement("canvas"),maskCtx=maskCanvas.getContext("2d");
+const segCanvas=document.createElement("canvas"),segCtx=segCanvas.getContext("2d");
+async function loadSegmenter(mp,fileset){
+  segmenter=await mp.ImageSegmenter.createFromOptions(fileset,{baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/1/selfie_segmenter.tflite",delegate:"GPU"},runningMode:"VIDEO",outputCategoryMask:false,outputConfidenceMasks:true});
+}
+const gsToggle=document.getElementById("greenscreen");
+let lastChromaTs=-1;
+function chromaKeyCutout(){
+  if(vid.readyState<2||vid.currentTime===lastChromaTs)return;
+  lastChromaTs=vid.currentTime;
+  const vw=vid.videoWidth,vh=vid.videoHeight;
+  const fw=Math.min(vw,960),fh=Math.round(fw*vh/vw);
+  if(fullCanvas.width!==fw||fullCanvas.height!==fh){fullCanvas.width=fw;fullCanvas.height=fh;segCanvas.width=fw;segCanvas.height=fh;maskCanvas.width=fw;maskCanvas.height=fh}
+  fullCtx.drawImage(vid,0,0,fw,fh); // full-res color, kept crisp
+  const mw=Math.min(vw,240),mh=Math.round(mw*vh/vw);
+  if(maskSmallCanvas.width!==mw||maskSmallCanvas.height!==mh){maskSmallCanvas.width=mw;maskSmallCanvas.height=mh}
+  maskSmallCtx.drawImage(vid,0,0,mw,mh);
+  const img=maskSmallCtx.getImageData(0,0,mw,mh),d=img.data;
+  for(let i=0;i<d.length;i+=4){
+    const r=d[i],g=d[i+1],b=d[i+2];
+    // how much this pixel looks like screen-green vs skin/hair/clothing
+    const key=g-Math.max(r,b);
+    // soft-edged threshold: fully opaque below 10, fully transparent above 55
+    d[i+3]=255-Math.min(255,Math.max(0,(key-10)*(255/45)));
+  }
+  maskSmallCtx.putImageData(img,0,0);
+  // upscale the small alpha mask smoothly, then cut it into the full-res color
+  maskCtx.imageSmoothingEnabled=true;if(maskCtx.imageSmoothingQuality)maskCtx.imageSmoothingQuality="high";
+  maskCtx.clearRect(0,0,fw,fh);maskCtx.drawImage(maskSmallCanvas,0,0,fw,fh);
+  segCtx.clearRect(0,0,fw,fh);segCtx.drawImage(fullCanvas,0,0);
+  segCtx.globalCompositeOperation="destination-in";segCtx.drawImage(maskCanvas,0,0);
+  segCtx.globalCompositeOperation="source-over";
+  segReady=true;
+}
+function updateCutout(){
+  if(gsToggle.checked){chromaKeyCutout();return}
+  if(!segmenter||vid.readyState<2||vid.currentTime===lastSegTs)return;
+  lastSegTs=vid.currentTime;
+  const vw=vid.videoWidth,vh=vid.videoHeight;
+  const fw=Math.min(vw,960),fh=Math.round(fw*vh/vw);
+  if(fullCanvas.width!==fw||fullCanvas.height!==fh){fullCanvas.width=fw;fullCanvas.height=fh;segCanvas.width=fw;segCanvas.height=fh;maskCanvas.width=fw;maskCanvas.height=fh}
+  fullCtx.drawImage(vid,0,0,fw,fh); // full-res color, kept crisp
+  let res;try{res=segmenter.segmentForVideo(vid,performance.now())}catch(e){return}
+  const mask=res.confidenceMasks&&res.confidenceMasks[0];if(!mask)return;
+  const md=mask.getAsFloat32Array(),mw=mask.width,mh=mask.height;
+  if(maskSmallCanvas.width!==mw||maskSmallCanvas.height!==mh){maskSmallCanvas.width=mw;maskSmallCanvas.height=mh}
+  const img=maskSmallCtx.createImageData(mw,mh),d=img.data;
+  for(let i=0;i<mw*mh;i++){const a=Math.min(255,md[i]*md[i]*255*1.15);const j=i*4;d[j]=255;d[j+1]=255;d[j+2]=255;d[j+3]=a}
+  maskSmallCtx.putImageData(img,0,0);
+  maskCtx.imageSmoothingEnabled=true;if(maskCtx.imageSmoothingQuality)maskCtx.imageSmoothingQuality="high";
+  maskCtx.clearRect(0,0,fw,fh);maskCtx.drawImage(maskSmallCanvas,0,0,fw,fh);
+  segCtx.clearRect(0,0,fw,fh);segCtx.drawImage(fullCanvas,0,0);
+  segCtx.globalCompositeOperation="destination-in";segCtx.drawImage(maskCanvas,0,0);
+  segCtx.globalCompositeOperation="source-over";
+  mask.close&&mask.close();
+  segReady=true;
+}
 
 let landmarker=null,lastTs=-1;
 async function loadTracker(){
@@ -57,6 +138,7 @@ async function loadTracker(){
   const opts=d=>({baseOptions:{modelAssetPath:"https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",delegate:d},runningMode:"VIDEO",numFaces:1});
   try{landmarker=await mp.FaceLandmarker.createFromOptions(fileset,opts("GPU"))}
   catch(e){landmarker=await mp.FaceLandmarker.createFromOptions(fileset,opts("CPU"))}
+  try{await loadSegmenter(mp,fileset)}catch(e){/* no cutout available; real background shows through instead */}
 }
 function detect(){
   if(!landmarker||!live||vid.readyState<2||vid.currentTime===lastTs)return;
@@ -74,56 +156,95 @@ function detect(){
 function draw(t){
   requestAnimationFrame(draw);
   ctx.clearRect(0,0,W,H);
+  drawBackground(t/1000);
   if(live&&vid.videoWidth){
-    const g=geom();ctx.save();ctx.translate(W,0);ctx.scale(-1,1);ctx.drawImage(vid,g.dx,g.dy,g.vw*g.s,g.vh*g.s);ctx.restore();
-        detect();
-  }else{ctx.fillStyle="#0d0b1a";ctx.fillRect(0,0,W,H)}
+    const g=geom();detect();updateCutout();
+    ctx.save();ctx.translate(W,0);ctx.scale(-1,1);
+    ctx.drawImage(segReady?segCanvas:vid,g.dx,g.dy,g.vw*g.s,g.vh*g.s);
+    ctx.restore();
+  }
   if(!live)return;
   fx+=(tx-fx)*.25;fy+=(ty-fy)*.25;fr+=(tr-fr)*.25;
   orb(fx,fy,fr,t/1000);
 }
 
 const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`};
-const SPARKS=Array.from({length:70},()=>({i:Math.random()*7|0,d:.15+Math.random()*.85,o:(Math.random()-.5),p:Math.random()*6.3,s:1.5+Math.random()*3}));
+const SPARKS=Array.from({length:110},()=>({i:Math.random()*7|0,d:.1+Math.random()*.9,o:(Math.random()-.5),p:Math.random()*6.3,s:1.2+Math.random()*2.6}));
 const SPEED=.4; // radians per second, clockwise
+function sparkleStar(cx,cy,s,rot,alpha){
+  // classic bright 4-point flare with fine diagonal cross, like a lens-flare sparkle
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.globalAlpha=alpha;
+  ctx.globalCompositeOperation="lighter";
+  const arm=(len,wid)=>{ctx.beginPath();ctx.moveTo(0,-len);ctx.quadraticCurveTo(wid,0,0,len);ctx.quadraticCurveTo(-wid,0,0,-len);ctx.closePath();ctx.fill()};
+  ctx.fillStyle="rgba(255,255,255,.95)";
+  arm(s*1.7,s*.16);
+  ctx.save();ctx.rotate(Math.PI/2);arm(s*1.7,s*.16);ctx.restore();
+  ctx.fillStyle="rgba(255,250,225,.75)";
+  ctx.save();ctx.rotate(Math.PI/4);arm(s*1.05,s*.07);ctx.restore();
+  ctx.save();ctx.rotate(-Math.PI/4);arm(s*1.05,s*.07);ctx.restore();
+  // glowing core
+  const g=ctx.createRadialGradient(0,0,0,0,0,s*.6);
+  g.addColorStop(0,"#fff");g.addColorStop(.4,"rgba(255,248,225,.9)");g.addColorStop(1,"rgba(255,220,150,0)");
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,s*.6,0,7);ctx.fill();
+  ctx.restore();
+}
 function orb(x,y,u,t){
-  const L=u*2.1,Wd=u*.5,base=-Math.PI/2+t*SPEED;
+  const L=u*2.3,Wd=u*.15,GAP=u*.55,Leff=L-GAP,base=-Math.PI/2+t*SPEED;
+  const fs=Math.max(14,Math.min(u*.3,36));
+  ctx.font=`500 ${fs}px Georgia,serif`;
+  let maxTw=0;VIRTUES.forEach(v=>{maxTw=Math.max(maxTw,ctx.measureText(v[0]).width)});
   ctx.save();ctx.globalCompositeOperation="lighter";
   VIRTUES.forEach((v,i)=>{
     const a=base+i*Math.PI*2/7,c=v[1];
-    ctx.save();ctx.translate(x,y);ctx.rotate(a);
-    const g=ctx.createLinearGradient(0,0,L,0);
-    g.addColorStop(0,"rgba(255,255,255,.95)");g.addColorStop(.12,rgba(c,.85));g.addColorStop(.7,rgba(c,.5));g.addColorStop(1,rgba(c,0));
-    // tapered beam: thin at the forehead, wide and soft at the far end
-    ctx.fillStyle=g;ctx.shadowColor=c;ctx.shadowBlur=u*.35;
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L,-Wd/2);ctx.quadraticCurveTo(L*1.06,0,L,Wd/2);ctx.closePath();ctx.fill();
-    // bright core line
-    ctx.shadowBlur=0;ctx.strokeStyle=g;ctx.lineWidth=Math.max(1,u*.05);
-    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(L*.9,0);ctx.stroke();
-    // label, kept upright on the left half
-    ctx.globalCompositeOperation="source-over";
-    const fs=Math.max(13,u*.3);
+    ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.translate(GAP,0);
+    // soft glowy beam: stamp overlapping radial-gradient blobs along the length instead of
+    // filling a hard-edged polygon, so it feathers naturally like a real light beam
+    const steps=28;
+    for(let s=0;s<=steps;s++){
+      const d=s/steps,px=d*Leff;
+      const wd=Wd*(.1+.9*Math.pow(d,1.5)); // stays narrow near the star, flares further out
+      const r=wd/2;if(r<.4)continue;
+      const fade=d>.8?1-(d-.8)/.2*.7:1; // gentle dissipate near the very tip
+      const rg=ctx.createRadialGradient(px,0,0,px,0,r);
+      rg.addColorStop(0,`rgba(255,255,255,${.9*fade})`);
+      rg.addColorStop(.35,rgba(c,.85*fade*(1-d*.25)));
+      rg.addColorStop(1,rgba(c,0));
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(px,0,r,0,7);ctx.fill();
+    }
+    // thin bright core glow for a laser-like highlight, itself soft (no hard stroke edge)
+    for(let s=0;s<=steps;s++){
+      const d=s/steps,px=d*Leff,r=Math.max(.6,Wd*.14*(1-d*.3));
+      const rg=ctx.createRadialGradient(px,0,0,px,0,r);
+      rg.addColorStop(0,"rgba(255,255,255,.9)");rg.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(px,0,r,0,7);ctx.fill();
+    }
+    // label, spread out past the face; its own small glowing capsule (sized to the word) so
+    // only that one spot widens, keeping the rest of the ray laser-thin
+    ctx.globalCompositeOperation="source-over";ctx.shadowBlur=0;
+    const labelD=.8;
     ctx.font=`500 ${fs}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";
-    ctx.translate(L*.6,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
-    // mild look: thin soft outline, gentle glow, slightly translucent letters
+    ctx.translate(Leff*labelD,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
+    const capW=maxTw+fs*.9,capH=fs*1.35,rx=capH/2;
+    ctx.beginPath();ctx.moveTo(-capW/2+rx,-capH/2);ctx.lineTo(capW/2-rx,-capH/2);ctx.arc(capW/2-rx,0,rx,-Math.PI/2,Math.PI/2);
+    ctx.lineTo(-capW/2+rx,capH/2);ctx.arc(-capW/2+rx,0,rx,Math.PI/2,Math.PI*1.5);ctx.closePath();
+    const cg=ctx.createLinearGradient(-capW/2,0,capW/2,0);
+    cg.addColorStop(0,rgba(c,0));cg.addColorStop(.18,rgba(c,.6));cg.addColorStop(.82,rgba(c,.6));cg.addColorStop(1,rgba(c,0));
+    ctx.fillStyle=cg;ctx.shadowColor=c;ctx.shadowBlur=fs*.4;ctx.fill();ctx.shadowBlur=0;
     ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=fs*.3;
     ctx.strokeStyle="rgba(20,12,40,.3)";ctx.lineWidth=fs*.1;ctx.strokeText(v[0],0,0);
-    ctx.shadowColor=c;ctx.shadowBlur=fs*.2;ctx.fillStyle="rgba(255,255,255,.92)";ctx.fillText(v[0],0,0);
+    ctx.shadowColor=c;ctx.shadowBlur=fs*.2;ctx.fillStyle="rgba(255,255,255,.95)";ctx.fillText(v[0],0,0);
     ctx.restore();
+    ctx.globalCompositeOperation="lighter";
   });
   // sparkles drifting with the beams
   SPARKS.forEach(p=>{
     const a=base+p.i*Math.PI*2/7,tw=.5+.5*Math.sin(t*3+p.p);
-    const lx=p.d*L,ly=p.o*Wd*(.2+p.d),px=x+Math.cos(a)*lx-Math.sin(a)*ly,py=y+Math.sin(a)*lx+Math.cos(a)*ly;
-    ctx.fillStyle=`rgba(255,255,255,${.15+.75*tw})`;ctx.beginPath();ctx.arc(px,py,p.s*tw*u/90,0,7);ctx.fill();
+    const lx=GAP+p.d*Leff,ly=p.o*Wd*(.15+p.d*.6),px=x+Math.cos(a)*lx-Math.sin(a)*ly,py=y+Math.sin(a)*lx+Math.cos(a)*ly;
+    ctx.fillStyle=`rgba(255,255,255,${.2+.8*tw})`;ctx.beginPath();ctx.arc(px,py,p.s*tw*u/90,0,7);ctx.fill();
   });
-  // central star
-  const pulse=1+.12*Math.sin(t*4);
-  const g=ctx.createRadialGradient(x,y,0,x,y,u*.17*pulse);
-  g.addColorStop(0,"#fff");g.addColorStop(.3,"rgba(255,244,210,.7)");g.addColorStop(1,"rgba(255,220,150,0)");
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,u*.17*pulse,0,7);ctx.fill();
-  ctx.strokeStyle="rgba(255,255,255,.8)";ctx.lineWidth=Math.max(1,u*.015);
-  ctx.beginPath();ctx.moveTo(x-u*.09*pulse,y);ctx.lineTo(x+u*.09*pulse,y);ctx.moveTo(x,y-u*.09*pulse);ctx.lineTo(x,y+u*.09*pulse);ctx.stroke();
+  // central star: sharp sparkle flare with a slow counter-pulse, like the reference
+  const pulse=1+.15*Math.sin(t*4);
+  sparkleStar(x,y,u*.26*pulse,-t*.6,1);
   ctx.restore();
 }
 requestAnimationFrame(draw);
@@ -133,6 +254,34 @@ let drag=false;
 cv.addEventListener("pointerdown",e=>{if(manual){drag=true;tx=e.offsetX;ty=e.offsetY}});
 cv.addEventListener("pointermove",e=>{if(manual&&drag){tx=e.offsetX;ty=e.offsetY}});
 addEventListener("pointerup",()=>drag=false);
+
+const fsBtn=document.getElementById("fsBtn"),capBtn=document.getElementById("capBtn"),appEl=document.getElementById("app");
+fsBtn.onclick=()=>{
+  if(!document.fullscreenElement){appEl.requestFullscreen&&appEl.requestFullscreen().catch(()=>{})}
+  else{document.exitFullscreen&&document.exitFullscreen()}
+};
+document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"⤢":"⛶"});
+capBtn.onclick=()=>{
+  const email=prompt("Email address to send this to (leave blank to skip):");
+  if(email===null)return; // cancelled
+  const trimmedEmail=email.trim();
+  if(trimmedEmail&&!/^\S+@\S+\.\S+$/.test(trimmedEmail)){alert("That doesn't look like a valid email address — I'll still save the image, just won't open a mail draft.")}
+  const name=prompt("Save image as:","selfie");
+  if(name===null)return; // cancelled
+  const filename=(name.trim()||"selfie")+".png";
+  cv.toBlob(blob=>{
+    if(!blob)return;
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url;a.download=filename;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if(trimmedEmail&&/^\S+@\S+\.\S+$/.test(trimmedEmail)){
+      const subject=encodeURIComponent("My virtue selfie");
+      const body=encodeURIComponent(`Here's my selfie! I just downloaded it as "${filename}" — please attach it from your downloads before sending.`);
+      setTimeout(()=>{window.location.href=`mailto:${encodeURIComponent(trimmedEmail)}?subject=${subject}&body=${body}`},400);
+    }
+  },"image/png");
+};
 
 go.onclick=async()=>{
   try{
