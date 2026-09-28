@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dart Sound Board (10 zones)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f3ecd9;--ink:#1a1512;--mute:#6b5f52;--cream:#f1e6c8;--black:#17130f;--red:#c8302a;--green:#1f7a4d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f0d0b;--ink:#f1e6c8;--mute:#a89a86}}
+:root[data-theme="dark"]{--bg:#0f0d0b;--ink:#f1e6c8;--mute:#a89a86}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;min-height:100%}
+main{max-width:920px;margin:0 auto;padding:22px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+h1{margin:0;font:400 2.6rem/1 "Bebas Neue",Impact,"Arial Narrow",sans-serif;letter-spacing:.03em}
+header p{margin:6px 0 0;color:var(--mute);font-size:.95rem;max-width:34ch}
+.bar{display:flex;gap:8px}
+.btn{font:inherit;font-size:.95rem;color:var(--ink);background:transparent;border:1.5px solid var(--ink);border-radius:99px;padding:9px 18px;cursor:pointer}
+.btn:hover{background:var(--ink);color:var(--bg)}
+.btn.stop{border-color:var(--red);color:var(--red)}
+.btn.stop:hover{background:var(--red);color:#fff}
+.btn:focus-visible,.tile button:focus-visible{outline:3px solid var(--red);outline-offset:2px}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.tile{position:relative;border-radius:14px;overflow:hidden;display:flex;flex-direction:column;background:var(--cream);color:var(--black);border:3px solid var(--red)}
+.tile:nth-child(even){background:var(--black);color:var(--cream);border-color:var(--green)}
+.tile .play{all:unset;box-sizing:border-box;cursor:pointer;display:block;padding:18px 16px 26px;min-height:112px;width:100%}
+.tile .play:focus-visible{outline:3px solid var(--red);outline-offset:-6px}
+.tile .name{display:block;font:400 2rem/1.05 "Bebas Neue",Impact,"Arial Narrow",sans-serif;letter-spacing:.03em}
+.tile .meta{display:block;margin-top:6px;font-size:.85rem;opacity:.75;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .tools{display:flex;gap:4px;padding:0 8px 8px}
+.tile .tools button{font:inherit;font-size:.78rem;color:inherit;background:transparent;border:0;border-radius:99px;padding:4px 9px;cursor:pointer;opacity:.7}
+.tile .tools button:hover{opacity:1;background:#8883}
+.tile::after{content:"";position:absolute;left:0;bottom:0;height:8px;width:calc(var(--p,0)*100%);background:var(--red)}
+.tile:nth-child(even)::after{background:var(--green)}
+.tile.playing{transform:scale(1.02);box-shadow:0 0 0 4px var(--red)}
+.tile.playing:nth-child(even){box-shadow:0 0 0 4px var(--green)}
+.tile.empty .name{opacity:.85}
+footer{margin-top:22px;color:var(--mute);font-size:.85rem;line-height:1.5}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <h1>Dart Sound Board</h1>
+      <p>Tap a zone when a dart lands. Each clip plays up to 10 seconds.</p>
+    </div>
+    <div class="bar">
+      <button class="btn stop" id="stop">Stop sound</button>
+      <button class="btn" id="add">Add zone</button>
+    </div>
+  </header>
+  <div id="grid"></div>
+  <footer>Keys 1 to 9 and 0 play the ten boxes in order, Esc stops. Renames, deletes and your own files are saved on this device only. To change box names or clips for every device, edit the list at the top of the script and add your MP3s to the audio folder. <button class="btn" id="reset" style="padding:3px 12px;font-size:.8rem;margin-left:6px">Reset this device</button></footer>
+</main>
+<script>
+// ===== EDIT THIS LIST to set the zones every device shows =====
+// id: short unique name, no spaces | label: the box name | src: path to the MP3 in your repo
+const CONFIG=[
+  {id:"worry",label:"Worry",src:"audio/worry.mp3"},
+  {id:"depression",label:"Depression",src:"audio/depression.mp3"},
+  {id:"arrogance",label:"Arrogance",src:"audio/arrogance.mp3"},
+  {id:"sadness",label:"Sadness",src:"audio/sadness.mp3"},
+  {id:"loneliness",label:"Loneliness",src:"audio/loneliness.mp3"},
+  {id:"jealousy",label:"Jealousy",src:"audio/jealousy.mp3"},
+  {id:"burden",label:"Burden",src:"audio/burden.mp3"},
+  {id:"anger",label:"Anger",src:"audio/anger.mp3"},
+  {id:"laziness",label:"Laziness",src:"audio/laziness.mp3"},
+  {id:"greed",label:"Greed",src:"audio/greed.mp3"}
+];
+const LIMIT=10,FADE=1;
+// per-device changes only (renames, own files, added or hidden zones)
+let state={labels:{},blobs:{},added:[],removed:[]},zones=[],active=-1,url=null,raf=0;
+const grid=document.getElementById("grid"),audio=new Audio();
+
+let db=null;
+function openDB(){return new Promise(res=>{try{const r=indexedDB.open("dart-soundboard-10",2);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains("kv"))r.result.createObjectStore("kv")};r.onsuccess=()=>res(r.result);r.onerror=()=>res(null)}catch(e){res(null)}})}
+function dbGet(k){return new Promise(res=>{if(!db)return res(null);try{const q=db.transaction("kv").objectStore("kv").get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)}catch(e){res(null)}})}
+function save(){if(!db)return;try{db.transaction("kv","readwrite").objectStore("kv").put(state,"state")}catch(e){}}
+function build(){
+  zones=CONFIG.filter(c=>!state.removed.includes(c.id)).concat(state.added)
+    .map(c=>({id:c.id,label:state.labels[c.id]||c.label,src:c.src||"",local:state.blobs[c.id]||null}));
+}
+function refresh(){save();build();render()}
+
+function stop(){
+  cancelAnimationFrame(raf);audio.pause();
+  if(url){URL.revokeObjectURL(url);url=null}
+  active=-1;audio.volume=1;
+  document.querySelectorAll(".tile").forEach(t=>{t.classList.remove("playing");t.style.setProperty("--p",0)});
+}
+function tick(){
+  if(active<0)return;
+  const t=audio.currentTime,lim=Math.min(LIMIT,audio.duration||LIMIT);
+  if(t>=lim||audio.ended){stop();return}
+  audio.volume=t>lim-FADE?Math.max(0,lim-t)/FADE:1; // fade out over the last second
+  const tile=grid.children[active];if(tile)tile.style.setProperty("--p",t/lim);
+  raf=requestAnimationFrame(tick);
+}
+function pick(i){
+  const inp=document.createElement("input");inp.type="file";inp.accept="audio/*";
+  inp.onchange=()=>{const f=inp.files[0];if(!f)return;state.blobs[zones[i].id]={blob:f,file:f.name};refresh()};
+  inp.click();
+}
+function play(i){
+  const z=zones[i];if(!z)return;
+  if(!z.local&&!z.src){pick(i);return}
+  stop();
+  if(z.local){url=URL.createObjectURL(z.local.blob);audio.src=url}else audio.src=z.src;
+  audio.play().then(()=>{active=i;grid.children[i].classList.add("playing");raf=requestAnimationFrame(tick)})
+    .catch(()=>{stop();if(!z.local&&confirm("No playable clip found at "+z.src+". Pick a file from this device instead?"))pick(i)});
+}
+function render(){
+  grid.innerHTML="";
+  zones.forEach((z,i)=>{
+    const d=document.createElement("div");d.className="tile"+(z.local||z.src?"":" empty");
+    const b=document.createElement("button");b.className="play";
+    const n=document.createElement("span");n.className="name";n.textContent=z.label;
+    const m=document.createElement("span");m.className="meta";m.textContent=z.local?"My file: "+z.local.file:z.src||"Tap to add a clip";
+    b.append(n,m);b.onclick=()=>play(i);
+    const tools=document.createElement("div");tools.className="tools";
+    const acts=[["Use my file",()=>pick(i)],["Rename",()=>{const v=prompt("Box name:",z.label);if(v&&v.trim()){state.labels[z.id]=v.trim();refresh()}}],
+      ["Delete",()=>{if(!confirm("Delete "+z.label+"?"))return;if(active===i)stop();
+        if(CONFIG.some(c=>c.id===z.id))state.removed.push(z.id);else state.added=state.added.filter(a=>a.id!==z.id);refresh()}]];
+    if(z.local)acts.splice(1,0,["Clear my file",()=>{if(active===i)stop();delete state.blobs[z.id];refresh()}]);
+    acts.forEach(([t,f])=>{const x=document.createElement("button");x.textContent=t;x.onclick=f;tools.append(x)});
+    d.append(b,tools);grid.append(d);
+  });
+}
+document.getElementById("stop").onclick=stop;
+document.getElementById("add").onclick=()=>{const v=prompt("New box name:");if(v&&v.trim()){state.added.push({id:"z"+Date.now(),label:v.trim()});refresh()}};
+document.getElementById("reset").onclick=()=>{if(confirm("Clear all changes made on this device?")){stop();state={labels:{},blobs:{},added:[],removed:[]};refresh()}};
+addEventListener("keydown",e=>{
+  if(e.key==="Escape"){stop();return}
+  if(/^[0-9]$/.test(e.key)&&!e.metaKey&&!e.ctrlKey&&!e.altKey)play((+e.key+9)%10);
+});
+(async()=>{
+  db=await openDB();
+  const saved=await dbGet("state");
+  if(saved)state=Object.assign(state,saved);
+  build();render();
+})();
+</script>
+</body>
+</html>
