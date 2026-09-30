@@ -4,41 +4,24 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>See Your Selfie</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#0d0b1a;--ink:#f3efff;--mute:#a79fc7;--foot:calc(168px + env(safe-area-inset-bottom));box-sizing:border-box}
+:root{--bg:#0d0b1a;--ink:#f3efff;--mute:#a79fc7;box-sizing:border-box}
 *{box-sizing:border-box}
 html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
 #app{position:relative;height:100%;height:100dvh;max-width:720px;margin:0 auto;overflow:hidden}
-canvas{position:absolute;left:0;top:0;width:100%;height:calc(100% - var(--foot));touch-action:none}
+canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
 header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 12px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
 h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em;background:linear-gradient(90deg,#ffd23f,#ff9ec7 50%,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;font-style:italic;font-size:clamp(.9rem,4.3vw,1.32rem);font-weight:400;letter-spacing:.03em;white-space:nowrap;color:#d9c8ff}
 #msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 32px;color:var(--mute);line-height:1.5}
-#legend{position:absolute;left:0;right:0;bottom:var(--foot);padding:24px 12px 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
+#legend{position:absolute;left:0;right:0;bottom:0;padding:24px 12px max(16px,env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
 .chip{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:5px 11px;border-radius:99px;background:#ffffff14}
 .chip i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
-#go{position:absolute;left:50%;bottom:calc(var(--foot) + 110px);transform:translateX(-50%);font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
+#go{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
 #go:focus-visible{outline:3px solid #fff;outline-offset:3px}
-#hint{position:absolute;left:0;right:0;bottom:calc(var(--foot) + 92px);text-align:center;font-size:.8rem;color:var(--mute);display:none}
+#hint{position:absolute;left:0;right:0;bottom:92px;text-align:center;font-size:.8rem;color:var(--mute);display:none}
 .iconbtn{font:inherit;font-size:1.05rem;line-height:1;color:var(--ink);background:#ffffff1f;border:1px solid #ffffff33;border-radius:50%;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .iconbtn:hover{background:#ffffff33}
-#foot{position:absolute;left:0;right:0;bottom:0;height:var(--foot);padding:6px 12px max(8px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at 50% 0%,#2a1d52 0%,#150f2b 60%,#0d0b1a 100%);border-top:1px solid #ffffff1f;pointer-events:none}
-.omrow{display:flex;align-items:center;justify-content:center;gap:clamp(12px,4vw,34px);max-width:100%}
-.orn{flex:none;width:clamp(36px,9vw,110px);display:block;filter:drop-shadow(0 0 6px #ffc46a66)}
-.orn svg{display:block;width:100%;height:auto}
-.orn.flip{transform:scaleX(-1)}
-#foot h2{margin:0;font-family:Cinzel,"Trajan Pro",Georgia,serif;font-weight:600;font-size:clamp(2rem,9vw,3.2rem);line-height:1.1;letter-spacing:.06em;white-space:nowrap;
-  background:linear-gradient(100deg,#ffd23f 0%,#fff3c4 22%,#ff9ec7 45%,#b58cff 62%,#7ad7ff 80%,#ffd23f 100%);background-size:220% 100%;
-  -webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;
-  animation:omShimmer 6s linear infinite,omGlow 3.2s ease-in-out infinite}
-#foot p{margin:4px 0 0;font-family:"Cormorant Garamond","Palatino Linotype",Palatino,Georgia,serif;font-style:italic;font-weight:500;font-size:clamp(1rem,5vw,1.4rem);letter-spacing:.08em;white-space:nowrap;color:#e3d6ff;text-shadow:0 0 12px #b58cff88}
-.contact{display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:8px;padding:0 6px}
-.contact a{pointer-events:auto;font-family:Cinzel,"Trajan Pro",Georgia,serif;font-weight:500;font-size:clamp(.9rem,4.4vw,1.8rem);letter-spacing:.04em;color:#fff;text-decoration:none;white-space:nowrap}
-@keyframes omShimmer{to{background-position:-220% 0}}
-@keyframes omGlow{0%,100%{filter:drop-shadow(0 0 6px #ffc46a66)}50%{filter:drop-shadow(0 0 16px #ff9ec7aa)}}
-@media (prefers-reduced-motion:reduce){#foot h2{animation:none}}
 </style>
 </head>
 <body>
@@ -56,7 +39,6 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
     <input type="checkbox" id="greenscreen" checked style="accent-color:#ffb020">Green screen
   </label>
   <div id="legend"></div>
-  <footer id="foot"><div class="omrow"><span class="orn" id="ornL"></span><h2>Om Shanti</h2><span class="orn flip" id="ornR"></span></div><p>( I am a Peaceful Being )</p><div class="contact"><a href="https://www.bknj.org" target="_blank" rel="noopener">www.bknj.org</a><a href="tel:7323811533">732.381.1533</a></div></footer>
 </div>
 <video id="v" playsinline muted style="display:none"></video>
 <script>
@@ -276,25 +258,6 @@ function orb(x,y,u,t){
       }
     };
     drawBucket(bc,c);drawBucket(bw,"#ffffff");
-    // glitter flowing from the star out toward the tip of each beam
-    for(let n=0;n<20;n++){
-      const d=(t*(.16+pxHash(n,i,6,0)*.14)+pxHash(n,i,5,0))%1;
-      const hw=(w0+(Wmax-w0)*d)/2,gx=d*Leff,gy=(pxHash(n,i,7,0)*2-1)*.85*hw;
-      const tw=Math.pow(.5+.5*Math.sin(t*11+n*2.3+i),2);
-      const fk=Math.min(1,Math.max(0,(GAP+gx-u*.95)/(u*.45)));
-      const a=Math.min(1,d/.06)*Math.min(1,(1-d)/.3)*tw*(.35+.65*fk);
-      if(a<.04)continue;
-      const sz=px*(.45+pxHash(n,i,8,0)*.75),col=n%3===0?c:(n%3===1?"#ffffff":"#fff0b8");
-      // four-point sparkle star, slowly spinning
-      const R=sz*1.35,rot=t*1.5+n,inner=R*.3;
-      ctx.fillStyle=rgba(col,Math.min(1,a*1.1));ctx.beginPath();
-      for(let k=0;k<8;k++){
-        const rr=k%2===0?R:inner,ang=rot+k*Math.PI/4-Math.PI/2;
-        ctx[k?"lineTo":"moveTo"](gx+Math.cos(ang)*rr,gy+Math.sin(ang)*rr);
-      }
-      ctx.closePath();ctx.fill();
-      if(tw>.8){ctx.fillStyle=`rgba(255,255,255,${a})`;ctx.beginPath();ctx.arc(gx,gy,R*.22,0,7);ctx.fill();}
-    }
     // soft thin rays fanning out at the tip (same for every beam)
     ctx.lineCap="round";
     for(let k=-3;k<=3;k++){
@@ -320,7 +283,7 @@ function orb(x,y,u,t){
   });
   // central star: sharp sparkle flare with a slow counter-pulse, like the reference
   const pulse=1+.15*Math.sin(t*4);
-  sparkleStar(x,y,u*.182*pulse,-t*.6,1,t);
+  sparkleStar(x,y,u*.26*pulse,-t*.6,1,t);
   ctx.restore();
 }
 requestAnimationFrame(draw);
@@ -337,94 +300,6 @@ fsBtn.onclick=()=>{
   else{document.exitFullscreen&&document.exitFullscreen()}
 };
 document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"⤢":"⛶"});
-
-// ---- lotus + flourish clip art (viewBox 132x40), used on both sides of "Om Shanti" and in the saved photo
-const ORN={
-  lines:["M0 20 H50","M50 20 C57 20 61 13 56 10 C52 8 48 12 51 15"],
-  dots:[[14,20,1.6],[27,20,1.2],[63,20,1.8]],
-  petals:[
-    "M100 32 C84 34 72 28 68 20 C78 20 92 24 100 32Z","M100 32 C116 34 128 28 132 20 C122 20 108 24 100 32Z",
-    "M100 32 C88 30 82 22 84 12 C92 14 98 22 100 32Z","M100 32 C112 30 118 22 116 12 C108 14 102 22 100 32Z",
-    "M100 6 C94 14 94 24 100 32 C106 24 106 14 100 6Z"],
-  base:"M91 35 Q100 39 109 35"
-};
-function ornSVG(id){
-  return `<svg viewBox="0 0 132 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
-  <linearGradient id="og${id}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffd23f" stop-opacity="0"/><stop offset="1" stop-color="#ffd23f"/></linearGradient>
-  <linearGradient id="op${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff0b8"/><stop offset="1" stop-color="#ff9ec7"/></linearGradient></defs>
-  ${ORN.lines.map(d=>`<path d="${d}" fill="none" stroke="url(#og${id})" stroke-width="1.5" stroke-linecap="round"/>`).join("")}
-  ${ORN.dots.map(d=>`<circle cx="${d[0]}" cy="${d[1]}" r="${d[2]}" fill="#ffd23f"/>`).join("")}
-  ${ORN.petals.map(d=>`<path d="${d}" fill="url(#op${id})" stroke="#ffffff99" stroke-width=".6" stroke-linejoin="round"/>`).join("")}
-  <path d="${ORN.base}" fill="none" stroke="#ffd23f" stroke-width="1.4" stroke-linecap="round"/></svg>`;
-}
-document.getElementById("ornL").innerHTML=ornSVG("L");document.getElementById("ornR").innerHTML=ornSVG("R");
-function drawOrn(c,x,y,w,mirror){
-  const k=w/132;c.save();c.translate(mirror?x+w:x,y-20*k);c.scale(mirror?-k:k,k);
-  const lg=c.createLinearGradient(0,0,50,0);lg.addColorStop(0,"rgba(255,210,63,0)");lg.addColorStop(1,"#ffd23f");
-  c.lineCap="round";c.lineWidth=1.5;c.strokeStyle=lg;c.shadowColor="rgba(255,196,106,.5)";c.shadowBlur=6*k;
-  ORN.lines.forEach(d=>c.stroke(new Path2D(d)));
-  c.fillStyle="#ffd23f";ORN.dots.forEach(d=>{c.beginPath();c.arc(d[0],d[1],d[2],0,7);c.fill()});
-  const pg=c.createLinearGradient(0,6,0,35);pg.addColorStop(0,"#fff0b8");pg.addColorStop(1,"#ff9ec7");
-  c.fillStyle=pg;c.strokeStyle="rgba(255,255,255,.6)";c.lineWidth=.6;c.lineJoin="round";
-  ORN.petals.forEach(d=>{const p=new Path2D(d);c.fill(p);c.stroke(p)});
-  c.strokeStyle="#ffd23f";c.lineWidth=1.4;c.stroke(new Path2D(ORN.base));c.restore();
-}
-// whole-screen capture: title on top, camera picture with virtue chips, "Om Shanti" footer below
-async function buildCapture(){
-  try{await Promise.all([document.fonts.load('600 48px Cinzel'),document.fonts.load('italic 500 20px "Cormorant Garamond"')])}catch(e){}
-  const d=cv.width/cv.clientWidth,W=cv.clientWidth,PH=cv.clientHeight,HH=96,FH=168,vw=innerWidth/100,cl=(a,b,c)=>Math.max(a,Math.min(c,b));
-  const out=document.createElement("canvas");out.width=Math.round(W*d);out.height=Math.round((HH+PH+FH)*d);
-  const c=out.getContext("2d");c.setTransform(d,0,0,d,0,0);c.fillStyle="#0d0b1a";c.fillRect(0,0,W,HH+PH+FH);
-  c.textAlign="left";c.textBaseline="alphabetic";
-  const gradText=(txt,cx,y,stops)=>{const w=c.measureText(txt).width,g=c.createLinearGradient(cx-w/2,0,cx+w/2,0);stops.forEach(s=>g.addColorStop(s[0],s[1]));c.fillStyle=g;c.fillText(txt,cx-w/2,y)};
-  // header
-  c.font='400 25.6px Georgia,"Times New Roman",serif';if("letterSpacing" in c)c.letterSpacing=".5px";
-  gradText("See Your Selfie",W/2,44,[[0,"#ffd23f"],[.5,"#ff9ec7"],[1,"#7ad7ff"]]);
-  const hs=cl(14.4,W*.043,21.1);c.font=`italic 400 ${hs}px "Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif`;
-  if("letterSpacing" in c)c.letterSpacing=".5px";
-  c.fillStyle="#d9c8ff";{const t="See the original virtues shining from the soul.",w=c.measureText(t).width;c.fillText(t,(W-w)/2,72)}
-  // picture
-  c.drawImage(cv,0,HH,W,PH);
-  // virtue chips over the bottom of the picture, like on screen
-  c.font="13.6px Georgia,serif";if("letterSpacing" in c)c.letterSpacing="0px";
-  const chips=VIRTUES.map(v=>({n:v[0],c:v[1],w:11+10+6+c.measureText(v[0]).width+11})),ch=27,gap=8,rows=[];let row=[],rw=0;
-  chips.forEach(k=>{if(row.length&&rw+gap+k.w>W-24){rows.push(row);row=[];rw=0}rw+=(row.length?gap:0)+k.w;row.push(k)});rows.push(row);
-  const lh=rows.length*(ch+gap)+24+12,lg=c.createLinearGradient(0,HH+PH-lh,0,HH+PH);
-  lg.addColorStop(0,"rgba(13,11,26,0)");lg.addColorStop(1,"rgba(13,11,26,.93)");c.fillStyle=lg;c.fillRect(0,HH+PH-lh,W,lh);
-  rows.forEach((r,ri)=>{
-    const tw=r.reduce((a,k)=>a+k.w,0)+gap*(r.length-1);let x=(W-tw)/2;const y=HH+PH-12-(rows.length-ri)*(ch+gap)+gap;
-    r.forEach(k=>{
-      c.fillStyle="rgba(255,255,255,.08)";c.beginPath();c.roundRect?c.roundRect(x,y,k.w,ch,ch/2):c.rect(x,y,k.w,ch);c.fill();
-      c.save();c.shadowColor=k.c;c.shadowBlur=8;c.fillStyle=k.c;c.beginPath();c.arc(x+11+5,y+ch/2,5,0,7);c.fill();c.restore();
-      c.fillStyle="#f3efff";c.textBaseline="middle";c.fillText(k.n,x+11+10+6,y+ch/2+.5);c.textBaseline="alphabetic";
-      x+=k.w+gap;
-    });
-  });
-  // footer
-  const fy=HH+PH;c.save();c.beginPath();c.rect(0,fy,W,FH);c.clip();
-  const rg=c.createRadialGradient(W/2,fy,0,W/2,fy,Math.max(W,FH)*.75);rg.addColorStop(0,"#2a1d52");rg.addColorStop(.6,"#150f2b");rg.addColorStop(1,"#0d0b1a");
-  c.fillStyle=rg;c.fillRect(0,fy,W,FH);c.fillStyle="rgba(255,255,255,.12)";c.fillRect(0,fy,W,1);
-  let tf=cl(32,vw*9,51.2),ow=cl(36,vw*9,110),og=cl(12,vw*4,34);
-  c.font=`600 ${tf}px Cinzel,"Trajan Pro",Georgia,serif`;if("letterSpacing" in c)c.letterSpacing=(tf*.06)+"px";
-  let tw=c.measureText("Om Shanti").width,tot=ow*2+og*2+tw;
-  if(tot>W-16){const f=(W-16)/tot;tf*=f;ow*=f;og*=f;c.font=`600 ${tf}px Cinzel,"Trajan Pro",Georgia,serif`;if("letterSpacing" in c)c.letterSpacing=(tf*.06)+"px";tw=c.measureText("Om Shanti").width;tot=ow*2+og*2+tw}
-  const x0=(W-tot)/2,ty=fy+(FH-46)*.5-2,cy=ty-tf*.3;
-  drawOrn(c,x0,cy,ow,false);drawOrn(c,x0+ow+og+tw+og,cy,ow,true);
-  c.save();c.shadowColor="rgba(255,158,199,.6)";c.shadowBlur=14;
-  gradText("Om Shanti",W/2,ty,[[0,"#ffd23f"],[.25,"#fff3c4"],[.5,"#ff9ec7"],[.72,"#b58cff"],[1,"#7ad7ff"]]);c.restore();
-  const sf=cl(16,vw*5,22.4);c.font=`italic 500 ${sf}px "Cormorant Garamond","Palatino Linotype",Palatino,Georgia,serif`;
-  if("letterSpacing" in c)c.letterSpacing=(sf*.08)+"px";
-  c.save();c.shadowColor="rgba(181,140,255,.55)";c.shadowBlur=12;c.fillStyle="#e3d6ff";
-  {const t="( I am a Peaceful Being )",w=c.measureText(t).width;c.fillText(t,(W-w)/2,ty+sf+8)}c.restore();
-  // website (left) and phone (right)
-  let cf=cl(14.4,vw*4.4,28.8);const cfont=z=>{c.font=`500 ${z}px Cinzel,"Trajan Pro",Georgia,serif`;if("letterSpacing" in c)c.letterSpacing=(z*.04)+"px"};
-  cfont(cf);const w1=c.measureText("www.bknj.org").width,w2=c.measureText("732.381.1533").width;
-  if(w1+w2+24>W-32){cf*=(W-32)/(w1+w2+24);cfont(cf)}
-  c.fillStyle="#fff";c.fillText("www.bknj.org",16,fy+FH-14);
-  {const t="732.381.1533",w=c.measureText(t).width;c.fillText(t,W-16-w,fy+FH-14)}
-  c.restore();
-  return out;
-}
 capBtn.onclick=()=>{
   const email=prompt("Email address to send this to (leave blank to skip):");
   if(email===null)return; // cancelled
@@ -432,7 +307,7 @@ capBtn.onclick=()=>{
   const name=prompt("Save image as:","selfie");
   if(name===null)return; // cancelled
   const filename=(name.trim()||"selfie")+".png";
-  buildCapture().then(out=>out.toBlob(blob=>{
+  cv.toBlob(blob=>{
     if(!blob)return;
     const url=URL.createObjectURL(blob),a=document.createElement("a");
     a.href=url;a.download=filename;
@@ -444,7 +319,7 @@ capBtn.onclick=()=>{
     const to=encodeURIComponent(trimmedEmail);
     const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
     setTimeout(()=>{window.open(gmailUrl,"_blank")},400);
-  },"image/png"));
+  },"image/png");
 };
 
 go.onclick=async()=>{
