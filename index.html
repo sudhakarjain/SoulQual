@@ -10,9 +10,9 @@
 html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
 #app{position:relative;height:100%;height:100dvh;max-width:720px;margin:0 auto;overflow:hidden}
 canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
-header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 20px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
-h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em}
-header p{margin:4px 0 0;font-style:normal;font-size:1.6rem;font-weight:400;letter-spacing:.02em;color:var(--ink)}
+header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 12px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
+h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em;background:linear-gradient(90deg,#ffd23f,#ff9ec7 50%,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
+header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;font-style:italic;font-size:clamp(.9rem,4.3vw,1.32rem);font-weight:400;letter-spacing:.03em;white-space:nowrap;color:#d9c8ff}
 #msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 32px;color:var(--mute);line-height:1.5}
 #legend{position:absolute;left:0;right:0;bottom:0;padding:24px 12px max(16px,env(safe-area-inset-bottom));display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
 .chip{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:5px 11px;border-radius:99px;background:#ffffff14}
@@ -27,7 +27,7 @@ header p{margin:4px 0 0;font-style:normal;font-size:1.6rem;font-weight:400;lette
 <body>
 <div id="app">
   <canvas id="c"></canvas>
-  <header><h1>See Your Selfie</h1><p>See the original virtues shining from</p><p>the soul.</p></header>
+  <header><h1>See Your Selfie</h1><p>See the original virtues shining from the soul.</p></header>
   <div id="msg">Camera off. Tap Turn on camera and allow access.</div>
   <button id="go">Turn on camera</button>
   <div id="hint"></div>
@@ -36,7 +36,7 @@ header p{margin:4px 0 0;font-style:normal;font-size:1.6rem;font-weight:400;lette
     <button id="capBtn" class="iconbtn" title="Capture photo">📷</button>
   </div>
   <label id="gsToggle" style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--mute);background:#ffffff14;padding:6px 10px;border-radius:99px;z-index:2;cursor:pointer">
-    <input type="checkbox" id="greenscreen" style="accent-color:#ffb020">Green screen
+    <input type="checkbox" id="greenscreen" checked style="accent-color:#ffb020">Green screen
   </label>
   <div id="legend"></div>
 </div>
@@ -171,25 +171,43 @@ function draw(t){
 const rgba=(h,a)=>{const n=parseInt(h.slice(1),16);return`rgba(${n>>16},${n>>8&255},${n&255},${a})`};
 const SPARKS=Array.from({length:110},()=>({i:Math.random()*7|0,d:.1+Math.random()*.9,o:(Math.random()-.5),p:Math.random()*6.3,s:1.2+Math.random()*2.6}));
 const SPEED=.4; // radians per second, clockwise
-function sparkleStar(cx,cy,s,rot,alpha){
-  // classic bright 4-point flare with fine diagonal cross, like a lens-flare sparkle
+function sparkleStar(cx,cy,s,rot,alpha,t){
+  // small glittering golden star flare with fine diagonal cross
   ctx.save();ctx.translate(cx,cy);ctx.rotate(rot);ctx.globalAlpha=alpha;
   ctx.globalCompositeOperation="lighter";
+  const shimmer=t!==undefined?.75+.25*Math.sin(t*9):1;
   const arm=(len,wid)=>{ctx.beginPath();ctx.moveTo(0,-len);ctx.quadraticCurveTo(wid,0,0,len);ctx.quadraticCurveTo(-wid,0,0,-len);ctx.closePath();ctx.fill()};
-  ctx.fillStyle="rgba(255,255,255,.95)";
+  ctx.fillStyle=`rgba(255,224,120,${.95*shimmer})`;
   arm(s*1.7,s*.16);
   ctx.save();ctx.rotate(Math.PI/2);arm(s*1.7,s*.16);ctx.restore();
-  ctx.fillStyle="rgba(255,250,225,.75)";
+  ctx.fillStyle=`rgba(255,200,80,${.8*shimmer})`;
   ctx.save();ctx.rotate(Math.PI/4);arm(s*1.05,s*.07);ctx.restore();
   ctx.save();ctx.rotate(-Math.PI/4);arm(s*1.05,s*.07);ctx.restore();
-  // glowing core
-  const g=ctx.createRadialGradient(0,0,0,0,0,s*.6);
-  g.addColorStop(0,"#fff");g.addColorStop(.4,"rgba(255,248,225,.9)");g.addColorStop(1,"rgba(255,220,150,0)");
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,s*.6,0,7);ctx.fill();
+  // glowing golden core
+  const g=ctx.createRadialGradient(0,0,0,0,0,s*.35);
+  g.addColorStop(0,"#fff8e0");g.addColorStop(.35,"rgba(255,210,90,.95)");g.addColorStop(1,"rgba(255,170,40,0)");
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,s*.35,0,7);ctx.fill();
+  // glittering flecks around the star that twinkle and drift over time
+  if(t!==undefined){
+    for(let i=0;i<16;i++){
+      const ga=i*Math.PI*2/16+t*.7,gd=s*(.9+.55*Math.sin(t*2.2+i*1.3));
+      const tw=Math.max(0,Math.sin(t*6+i*2.1))**2; // sharp, sparkly on/off flicker
+      if(tw<.05)continue;
+      const gx=Math.cos(ga)*gd,gy=Math.sin(ga)*gd,gr=s*(.05+.08*tw);
+      const gg=ctx.createRadialGradient(gx,gy,0,gx,gy,gr);
+      gg.addColorStop(0,`rgba(255,245,200,${.95*tw})`);gg.addColorStop(.5,`rgba(255,210,110,${.6*tw})`);gg.addColorStop(1,"rgba(255,200,80,0)");
+      ctx.fillStyle=gg;ctx.beginPath();ctx.arc(gx,gy,gr,0,7);ctx.fill();
+      // tiny cross glint on the brightest flecks
+      if(tw>.7){
+        ctx.strokeStyle=`rgba(255,250,220,${(tw-.7)/.3*.8})`;ctx.lineWidth=Math.max(.5,gr*.15);
+        ctx.beginPath();ctx.moveTo(gx-gr*1.8,gy);ctx.lineTo(gx+gr*1.8,gy);ctx.moveTo(gx,gy-gr*1.8);ctx.lineTo(gx,gy+gr*1.8);ctx.stroke();
+      }
+    }
+  }
   ctx.restore();
 }
 function orb(x,y,u,t){
-  const L=u*2.3,Wd=u*.15,GAP=u*.55,Leff=L-GAP,base=-Math.PI/2+t*SPEED;
+  const L=u*2.3,Wd=u*.2,GAP=u*.55,Leff=L-GAP,base=-Math.PI/2+t*SPEED;
   const fs=Math.max(14,Math.min(u*.3,36));
   ctx.font=`500 ${fs}px Georgia,serif`;
   let maxTw=0;VIRTUES.forEach(v=>{maxTw=Math.max(maxTw,ctx.measureText(v[0]).width)});
@@ -224,27 +242,15 @@ function orb(x,y,u,t){
     const labelD=.8;
     ctx.font=`500 ${fs}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";
     ctx.translate(Leff*labelD,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
-    const capW=maxTw+fs*.9,capH=fs*1.35,rx=capH/2;
-    ctx.beginPath();ctx.moveTo(-capW/2+rx,-capH/2);ctx.lineTo(capW/2-rx,-capH/2);ctx.arc(capW/2-rx,0,rx,-Math.PI/2,Math.PI/2);
-    ctx.lineTo(-capW/2+rx,capH/2);ctx.arc(-capW/2+rx,0,rx,Math.PI/2,Math.PI*1.5);ctx.closePath();
-    const cg=ctx.createLinearGradient(-capW/2,0,capW/2,0);
-    cg.addColorStop(0,rgba(c,0));cg.addColorStop(.18,rgba(c,.6));cg.addColorStop(.82,rgba(c,.6));cg.addColorStop(1,rgba(c,0));
-    ctx.fillStyle=cg;ctx.shadowColor=c;ctx.shadowBlur=fs*.4;ctx.fill();ctx.shadowBlur=0;
-    ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=fs*.3;
-    ctx.strokeStyle="rgba(20,12,40,.3)";ctx.lineWidth=fs*.1;ctx.strokeText(v[0],0,0);
+    ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=fs*.35;
+    ctx.strokeStyle="rgba(20,12,40,.55)";ctx.lineWidth=fs*.1;ctx.strokeText(v[0],0,0);
     ctx.shadowColor=c;ctx.shadowBlur=fs*.2;ctx.fillStyle="rgba(255,255,255,.95)";ctx.fillText(v[0],0,0);
     ctx.restore();
     ctx.globalCompositeOperation="lighter";
   });
-  // sparkles drifting with the beams
-  SPARKS.forEach(p=>{
-    const a=base+p.i*Math.PI*2/7,tw=.5+.5*Math.sin(t*3+p.p);
-    const lx=GAP+p.d*Leff,ly=p.o*Wd*(.15+p.d*.6),px=x+Math.cos(a)*lx-Math.sin(a)*ly,py=y+Math.sin(a)*lx+Math.cos(a)*ly;
-    ctx.fillStyle=`rgba(255,255,255,${.2+.8*tw})`;ctx.beginPath();ctx.arc(px,py,p.s*tw*u/90,0,7);ctx.fill();
-  });
   // central star: sharp sparkle flare with a slow counter-pulse, like the reference
   const pulse=1+.15*Math.sin(t*4);
-  sparkleStar(x,y,u*.26*pulse,-t*.6,1);
+  sparkleStar(x,y,u*.26*pulse,-t*.6,1,t);
   ctx.restore();
 }
 requestAnimationFrame(draw);
@@ -265,7 +271,6 @@ capBtn.onclick=()=>{
   const email=prompt("Email address to send this to (leave blank to skip):");
   if(email===null)return; // cancelled
   const trimmedEmail=email.trim();
-  if(trimmedEmail&&!/^\S+@\S+\.\S+$/.test(trimmedEmail)){alert("That doesn't look like a valid email address — I'll still save the image, just won't open a mail draft.")}
   const name=prompt("Save image as:","selfie");
   if(name===null)return; // cancelled
   const filename=(name.trim()||"selfie")+".png";
@@ -275,11 +280,12 @@ capBtn.onclick=()=>{
     a.href=url;a.download=filename;
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    if(trimmedEmail&&/^\S+@\S+\.\S+$/.test(trimmedEmail)){
-      const subject=encodeURIComponent("My virtue selfie");
-      const body=encodeURIComponent(`Here's my selfie! I just downloaded it as "${filename}" — please attach it from your downloads before sending.`);
-      setTimeout(()=>{window.location.href=`mailto:${encodeURIComponent(trimmedEmail)}?subject=${subject}&body=${body}`},400);
-    }
+    const subject=encodeURIComponent('"I The Soul" - Selfie');
+    const bodyText=`Thanks for Visiting us. Please feel free to check on our website BKNJ.ORG for more details and contact information. Thanks & Om Shanti ( I am a Peaceful Being)\n\n(Your photo was just downloaded as "${filename}" — please attach it here before sending; browsers don't allow pages to attach files automatically.)`;
+    const body=encodeURIComponent(bodyText);
+    const to=encodeURIComponent(trimmedEmail);
+    const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
+    setTimeout(()=>{window.open(gmailUrl,"_blank")},400);
   },"image/png");
 };
 
