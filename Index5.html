@@ -10,7 +10,7 @@
 :root{--bg:#0d0b1a;--ink:#f3efff;--mute:#a79fc7;--foot:calc(168px + env(safe-area-inset-bottom));box-sizing:border-box}
 *{box-sizing:border-box}
 html,body{height:100%;height:100dvh;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
-#app{position:relative;height:100%;height:100dvh;width:100%;margin:0;overflow:hidden}
+#app{position:relative;height:100%;height:100dvh;max-width:720px;margin:0 auto;overflow:hidden}
 canvas{position:absolute;left:0;top:0;width:100%;height:calc(100% - var(--foot));touch-action:none}
 header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-inset-top)) 12px 40px;text-align:center;background:linear-gradient(#0d0b1add,transparent);pointer-events:none}
 h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em;background:linear-gradient(90deg,#ffd23f,#ff9ec7 50%,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
@@ -434,9 +434,9 @@ capBtn.onclick=()=>{
   const email=prompt("Email address to send this to (leave blank to skip):");
   if(email===null)return; // cancelled
   const trimmedEmail=email.trim();
-  const name=prompt("Save image as:","i-the-soul-selfie");
+  const name=prompt("Save image as:","selfie");
   if(name===null)return; // cancelled
-  const filename=(name.trim()||"i-the-soul-selfie")+".png";
+  const filename=(name.trim()||"selfie")+".png";
   buildCapture().then(out=>out.toBlob(blob=>{
     if(!blob)return;
     const url=URL.createObjectURL(blob),a=document.createElement("a");
