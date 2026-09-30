@@ -206,9 +206,8 @@ function sparkleStar(cx,cy,s,rot,alpha,t){
   }
   ctx.restore();
 }
-const pxHash=(a,b,c,d)=>{let h=Math.imul(a+101,374761393)^Math.imul(b+977,668265263)^Math.imul(c+31,1274126177)^Math.imul(d+7,2246822519);h=Math.imul(h^(h>>>13),1274126177);return((h^(h>>>16))>>>0)/4294967295};
 function orb(x,y,u,t){
-  const L=u*2.6,Wd=u*.2,GAP=u*.42,Leff=L-GAP,base=-Math.PI/2+t*SPEED;
+  const L=u*2.3,Wd=u*.2,GAP=u*.55,Leff=L-GAP,base=-Math.PI/2+t*SPEED;
   const fs=Math.max(14,Math.min(u*.3,36));
   ctx.font=`500 ${fs}px Georgia,serif`;
   let maxTw=0;VIRTUES.forEach(v=>{maxTw=Math.max(maxTw,ctx.measureText(v[0]).width)});
@@ -216,63 +215,31 @@ function orb(x,y,u,t){
   VIRTUES.forEach((v,i)=>{
     const a=base+i*Math.PI*2/7,c=v[1];
     ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.translate(GAP,0);
-    // broad V-shaped beam built from square pixels that flicker on/off. Every beam uses the
-    // exact same length and width. A faint smooth base keeps the label backed so it stays readable.
-    ctx.globalCompositeOperation="source-over";
-    const Wmax=Math.max(Wd*3.4,fs*2.8),w0=Wd*.4;
-    {
-      const g=ctx.createLinearGradient(0,0,Leff,0);
-      const p1=Math.max(.01,(u*.95-GAP)/Leff),p2=Math.min(.6,(u*1.4-GAP)/Leff);
-      g.addColorStop(0,rgba(c,.04));g.addColorStop(p1,rgba(c,.04));g.addColorStop(p2,rgba(c,.16));g.addColorStop(.7,rgba(c,.2));g.addColorStop(1,rgba(c,0));
-      ctx.fillStyle=g;ctx.beginPath();
-      ctx.moveTo(0,-w0/2);ctx.lineTo(Leff,-Wmax/2);ctx.lineTo(Leff,Wmax/2);ctx.lineTo(0,w0/2);
-      ctx.closePath();ctx.fill();
+    // soft glowy beam: stamp overlapping radial-gradient blobs along the length instead of
+    // filling a hard-edged polygon, so it feathers naturally like a real light beam
+    const steps=28;
+    for(let s=0;s<=steps;s++){
+      const d=s/steps,px=d*Leff;
+      const wd=Wd*(.1+.9*Math.pow(d,1.5)); // stays narrow near the star, flares further out
+      const r=wd/2;if(r<.4)continue;
+      const fade=d>.8?1-(d-.8)/.2*.7:1; // gentle dissipate near the very tip
+      const rg=ctx.createRadialGradient(px,0,0,px,0,r);
+      rg.addColorStop(0,`rgba(255,255,255,${.9*fade})`);
+      rg.addColorStop(.35,rgba(c,.85*fade*(1-d*.25)));
+      rg.addColorStop(1,rgba(c,0));
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(px,0,r,0,7);ctx.fill();
     }
-    const px=Math.max(3,Math.round(u*.03)),cols=Math.floor(Leff/px),LV=6;
-    const bc=Array.from({length:LV+1},()=>[]),bw=Array.from({length:LV+1},()=>[]);
-    for(let ci=0;ci<cols;ci++){
-      const d=(ci+.5)/cols,x=ci*px,hw=(w0+(Wmax-w0)*d)/2;
-      const along=d>.75?Math.max(0,1-(d-.75)/.25):1;
-      const rows=Math.floor(hw/px);
-      for(let rj=-rows;rj<=rows;rj++){
-        const y=rj*px,edge=Math.abs(y+px/2)/hw;
-        if(edge>1)continue;
-        const ph=pxHash(ci,rj,i,0),step=Math.floor(t*9+ph*4);
-        const r=pxHash(ci,rj,i,step+1);
-        let al=(1-.7*Math.pow(edge,1.5))*along;
-        {const fk=Math.min(1,Math.max(0,(GAP+x+px/2-u*.95)/(u*.45)));al*=.22+.78*fk*fk*(3-2*fk);} // dimmer over the face
-        al*=r<.1?.12:.5+.5*r; // random pixels dim out, others shimmer
-        if(d>.75&&pxHash(ci,rj,i,99)>along+.12)continue; // pixels thin out toward the tip instead of a hard edge
-        const white=(r>.94)||(Math.abs(rj)===0&&d<.9&&r>.3);
-        const lv=Math.round(Math.min(1,al)*LV);
-        if(lv<1)continue;
-        (white?bw:bc)[lv].push(x,y);
-      }
-    }
-    const drawBucket=(arr,color)=>{
-      for(let lv=1;lv<=LV;lv++){
-        const list=arr[lv];if(!list.length)continue;
-        ctx.fillStyle=rgba(color,.9*lv/LV);ctx.beginPath();
-        for(let k=0;k<list.length;k+=2)ctx.rect(list[k],list[k+1],px-.6,px-.6);
-        ctx.fill();
-      }
-    };
-    drawBucket(bc,c);drawBucket(bw,"#ffffff");
-    // soft thin rays fanning out at the tip (same for every beam)
-    ctx.lineCap="round";
-    for(let k=-3;k<=3;k++){
-      const fl=.55+.45*Math.sin(t*6+k*1.9+i*.8),ln=Leff*(.34-Math.abs(k)*.035);
-      const x0=Leff*.7,y0=k*Wmax*.075,ang=k*.075;
-      const x1=x0+Math.cos(ang)*ln,y1=y0+Math.sin(ang)*ln;
-      const rg=ctx.createLinearGradient(x0,y0,x1,y1);
-      rg.addColorStop(0,rgba(c,.0));rg.addColorStop(.3,rgba(c,.5*fl));rg.addColorStop(1,rgba(c,0));
-      ctx.strokeStyle=rg;ctx.lineWidth=Math.max(1,px*(k===0?.5:.3));
-      ctx.beginPath();ctx.moveTo(x0,y0);ctx.lineTo(x1,y1);ctx.stroke();
+    // thin bright core glow for a laser-like highlight, itself soft (no hard stroke edge)
+    for(let s=0;s<=steps;s++){
+      const d=s/steps,px=d*Leff,r=Math.max(.6,Wd*.14*(1-d*.3));
+      const rg=ctx.createRadialGradient(px,0,0,px,0,r);
+      rg.addColorStop(0,"rgba(255,255,255,.9)");rg.addColorStop(1,"rgba(255,255,255,0)");
+      ctx.fillStyle=rg;ctx.beginPath();ctx.arc(px,0,r,0,7);ctx.fill();
     }
     // label, spread out past the face; its own small glowing capsule (sized to the word) so
     // only that one spot widens, keeping the rest of the ray laser-thin
     ctx.globalCompositeOperation="source-over";ctx.shadowBlur=0;
-    const labelD=.5;
+    const labelD=.8;
     ctx.font=`500 ${fs}px Georgia,serif`;ctx.textAlign="center";ctx.textBaseline="middle";ctx.lineJoin="round";
     ctx.translate(Leff*labelD,0);if(Math.cos(a)<0)ctx.rotate(Math.PI);
     ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=fs*.35;
