@@ -16,17 +16,14 @@ header{position:absolute;top:0;left:0;right:0;padding:max(16px,env(safe-area-ins
 h1{margin:0;font-size:1.6rem;font-weight:400;letter-spacing:.02em;background:linear-gradient(90deg,#ffd23f,#ff9ec7 50%,#7ad7ff);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent}
 header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;font-style:italic;font-size:clamp(.9rem,4.3vw,1.32rem);font-weight:400;letter-spacing:.03em;white-space:nowrap;color:#d9c8ff}
 #msg{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding:0 32px;color:var(--mute);line-height:1.5}
-#legend{width:100%;padding:12px 12px 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
+#legend{position:absolute;left:0;right:0;bottom:var(--foot);padding:24px 12px 12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;background:linear-gradient(transparent,#0d0b1aee)}
 .chip{display:flex;align-items:center;gap:6px;font-size:.85rem;padding:5px 11px;border-radius:99px;background:#ffffff14}
 .chip i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
-#go{font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
+#go{position:absolute;left:50%;bottom:calc(var(--foot) + 110px);transform:translateX(-50%);font:inherit;font-size:1rem;color:#1a1030;background:linear-gradient(90deg,#ffd23f,#ff7eb6,#7ad7ff);border:0;border-radius:99px;padding:13px 28px;cursor:pointer}
 #go:focus-visible{outline:3px solid #fff;outline-offset:3px}
-#hint{text-align:center;padding:0 16px;font-size:.8rem;color:var(--mute);display:none}
+#hint{position:absolute;left:0;right:0;bottom:calc(var(--foot) + 92px);text-align:center;font-size:.8rem;color:var(--mute);display:none}
 .iconbtn{font:inherit;font-size:1.05rem;line-height:1;color:var(--ink);background:#ffffff1f;border:1px solid #ffffff33;border-radius:50%;width:38px;height:38px;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}
 .iconbtn:hover{background:#ffffff33}
-#stack{position:absolute;left:0;right:0;bottom:var(--foot);display:flex;flex-direction:column;align-items:center;gap:10px;pointer-events:none}
-#stack>*{pointer-events:auto}
-#capBtn{width:56px;height:56px;font-size:1.6rem;background:#ffffff26;border:1.5px solid #ffffff55;box-shadow:0 4px 18px #0006;margin-bottom:-4px}
 #foot{position:absolute;left:0;right:0;bottom:0;height:var(--foot);padding:6px 12px max(8px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at 50% 0%,#2a1d52 0%,#150f2b 60%,#0d0b1a 100%);border-top:1px solid #ffffff1f;pointer-events:none}
 .omrow{display:flex;align-items:center;justify-content:center;gap:clamp(12px,4vw,34px);max-width:100%}
 .orn{flex:none;width:clamp(36px,9vw,110px);display:block;filter:drop-shadow(0 0 6px #ffc46a66)}
@@ -49,18 +46,16 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
   <canvas id="c"></canvas>
   <header><h1>See Your Selfie</h1><p>See the original virtues shining from the soul.</p></header>
   <div id="msg">Camera off. Tap Turn on camera and allow access.</div>
+  <button id="go">Turn on camera</button>
+  <div id="hint"></div>
   <div id="controls" style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));display:flex;gap:8px;z-index:2">
     <button id="fsBtn" class="iconbtn" title="Full screen">⛶</button>
+    <button id="capBtn" class="iconbtn" title="Capture photo">📷</button>
   </div>
   <label id="gsToggle" style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--mute);background:#ffffff14;padding:6px 10px;border-radius:99px;z-index:2;cursor:pointer">
     <input type="checkbox" id="greenscreen" checked style="accent-color:#ffb020">Green screen
   </label>
-  <div id="stack">
-    <button id="go">Turn on camera</button>
-    <div id="hint"></div>
-    <button id="capBtn" class="iconbtn" title="Capture photo">📷</button>
-    <div id="legend"></div>
-  </div>
+  <div id="legend"></div>
   <footer id="foot"><div class="omrow"><span class="orn" id="ornL"></span><h2>Om Shanti</h2><span class="orn flip" id="ornR"></span></div><p>( I am a Peaceful Being )</p><div class="contact"><a href="https://www.bknj.org" target="_blank" rel="noopener">www.bknj.org</a><a href="tel:7323811533">732.381.1533</a></div></footer>
 </div>
 <video id="v" playsinline muted style="display:none"></video>
@@ -75,7 +70,7 @@ let W=0,H=0,live=false,detector=null,busy=false,manual=false;
 let fx=0,fy=0,fr=40,tx=0,ty=0,tr=40,ready=false;
 
 function resize(){const d=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);
-  if(!ready){tx=fx=W/2;ty=fy=H*.3;tr=fr=Math.min(W,H)*.2}}
+  if(!ready){tx=fx=W/2;ty=fy=H*.36;tr=fr=Math.min(W,H)*.2}}
 addEventListener("resize",resize);resize();
 
 const ZOOM=.78,RISE=.02; // zoom out a bit; keep the subject low enough to clear the title
@@ -172,7 +167,7 @@ function detect(){
   const g=geom(),P=i=>toScreen(g,{x:L[i].x*g.vw,y:L[i].y*g.vh});
   const brow=P(9),top=P(10),le=P(33),re=P(263);
   // center of forehead: between the brows and the hairline
-  tx=brow.x+(top.x-brow.x)*.72;ty=brow.y+(top.y-brow.y)*.72; // on the centre line of the face, a bit higher up the forehead
+  tx=brow.x+(top.x-brow.x)*.5;ty=brow.y+(top.y-brow.y)*.5;
   tr=Math.hypot(le.x-re.x,le.y-re.y);ready=true;
 }
 
