@@ -75,7 +75,7 @@ let W=0,H=0,live=false,detector=null,busy=false,manual=false;
 let fx=0,fy=0,fr=40,tx=0,ty=0,tr=40,ready=false;
 
 function resize(){const d=devicePixelRatio||1;W=cv.clientWidth;H=cv.clientHeight;cv.width=W*d;cv.height=H*d;ctx.setTransform(d,0,0,d,0,0);
-  if(!ready){tx=fx=W/2;ty=fy=H*.3;tr=fr=Math.min(W,H)*.2}}
+  if(!ready){tx=fx=W/2;ty=fy=H*.36;tr=fr=Math.min(W,H)*.2}}
 addEventListener("resize",resize);resize();
 
 const ZOOM=.78,RISE=.02; // zoom out a bit; keep the subject low enough to clear the title
@@ -172,7 +172,7 @@ function detect(){
   const g=geom(),P=i=>toScreen(g,{x:L[i].x*g.vw,y:L[i].y*g.vh});
   const brow=P(9),top=P(10),le=P(33),re=P(263);
   // center of forehead: between the brows and the hairline
-  tx=brow.x+(top.x-brow.x)*.72;ty=brow.y+(top.y-brow.y)*.72; // on the centre line of the face, a bit higher up the forehead
+  tx=brow.x+(top.x-brow.x)*.48;ty=brow.y+(top.y-brow.y)*.48; // on the centre line of the face, a bit higher up the forehead
   tr=Math.hypot(le.x-re.x,le.y-re.y);ready=true;
 }
 
@@ -434,9 +434,9 @@ capBtn.onclick=()=>{
   const email=prompt("Email address to send this to (leave blank to skip):");
   if(email===null)return; // cancelled
   const trimmedEmail=email.trim();
-  const name=prompt("Save image as:","i-the-soul-selfie");
+  const name=prompt("Save image as:","selfie");
   if(name===null)return; // cancelled
-  const filename=(name.trim()||"i-the-soul-selfie")+".png";
+  const filename=(name.trim()||"selfie")+".png";
   buildCapture().then(out=>out.toBlob(blob=>{
     if(!blob)return;
     const url=URL.createObjectURL(blob),a=document.createElement("a");
