@@ -439,12 +439,9 @@ capBtn.onclick=()=>{
   const email=prompt("Email address to send this to (leave blank to skip):");
   if(email===null)return; // cancelled
   const trimmedEmail=email.trim();
-  const nd=new Date(),p2=n=>String(n).padStart(2,"0");
-  const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const defName=`SoulSelfie-${MON[nd.getMonth()]}-${p2(nd.getDate())}-${nd.getFullYear()}`; // local date, e.g. SoulSelfie-Oct-09-2026
-  const name=prompt("Save image as:",defName);
+  const name=prompt("Save image as:","selfie");
   if(name===null)return; // cancelled
-  const filename=(name.trim()||defName)+".png";
+  const filename=(name.trim()||"selfie")+".png";
   buildCapture().then(out=>out.toBlob(blob=>{
     if(!blob)return;
     const url=URL.createObjectURL(blob),a=document.createElement("a");
