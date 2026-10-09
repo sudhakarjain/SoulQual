@@ -382,11 +382,6 @@ async function buildCapture(){
   const c=out.getContext("2d");c.setTransform(d,0,0,d,0,0);c.fillStyle="#0d0b1a";c.fillRect(0,0,W,HH+PH+FH);
   c.textAlign="left";c.textBaseline="alphabetic";
   const gradText=(txt,cx,y,stops)=>{const w=c.measureText(txt).width,g=c.createLinearGradient(cx-w/2,0,cx+w/2,0);stops.forEach(s=>g.addColorStop(s[0],s[1]));c.fillStyle=g;c.fillText(txt,cx-w/2,y)};
-  // date & time stamp: small and faded, centered above the title
-  {const now=new Date();
-   const stamp=now.toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"})+"  ·  "+now.toLocaleTimeString(undefined,{hour:"numeric",minute:"2-digit",timeZoneName:"short"});
-   c.font='italic 11px Georgia,"Times New Roman",serif';if("letterSpacing" in c)c.letterSpacing=".6px";
-   c.fillStyle="rgba(217,200,255,.45)";const w=c.measureText(stamp).width;c.fillText(stamp,(W-w)/2,17)}
   // header
   c.font='400 25.6px Georgia,"Times New Roman",serif';if("letterSpacing" in c)c.letterSpacing=".5px";
   gradText("See Your Selfie",W/2,44,[[0,"#ffd23f"],[.5,"#ff9ec7"],[1,"#7ad7ff"]]);
