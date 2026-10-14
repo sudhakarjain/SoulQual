@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>See Your Selfie</title>
+<title>See Your Self</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600&family=Cormorant+Garamond:ital,wght@1,500&display=swap" rel="stylesheet">
 <style>
@@ -47,10 +47,11 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
 <body>
 <div id="app">
   <canvas id="c"></canvas>
-  <header><h1>See Your Selfie</h1><p>See the original virtues shining from the soul.</p></header>
+  <header><h1>See Your Self</h1><p>See the original virtues shining from the soul.</p></header>
   <div id="msg">Camera off. Tap Turn on camera and allow access.</div>
   <div id="controls" style="position:absolute;left:max(12px,env(safe-area-inset-left));top:max(12px,env(safe-area-inset-top));display:flex;gap:8px;z-index:2">
     <button id="fsBtn" class="iconbtn" title="Full screen">⛶</button>
+    <button id="muteBtn" class="iconbtn" title="Mute ambient sound" aria-pressed="false">🔊</button>
   </div>
   <label id="gsToggle" style="position:absolute;right:max(12px,env(safe-area-inset-right));top:max(12px,env(safe-area-inset-top));display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--mute);background:#ffffff14;padding:6px 10px;border-radius:99px;z-index:2;cursor:pointer">
     <input type="checkbox" id="greenscreen" checked style="accent-color:#ffb020">Green screen
@@ -64,6 +65,7 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
   <footer id="foot"><div class="omrow"><span class="orn" id="ornL"></span><h2>Om Shanti</h2><span class="orn flip" id="ornR"></span></div><p>( I am a Peaceful Being )</p><div class="contact"><a href="https://www.bknj.org" target="_blank" rel="noopener">www.bknj.org</a><a href="tel:7323811533">732.381.1533</a></div></footer>
 </div>
 <video id="v" playsinline muted style="display:none"></video>
+<audio id="ambientAudio" src="ambient.mp3" loop preload="auto" style="display:none"></audio>
 <script>
 const VIRTUES=[["Power","#ff3b30"],["Purity","#ffb020"],["Happiness","#fff3a0"],["Love","#7dff4d"],["Peace","#5ff5e6"],["Bliss","#d67bff"],["Knowledge","#8fa8ff"]];
 document.getElementById("legend").innerHTML=VIRTUES.map(v=>`<span class="chip" style="--c:${v[1]}"><i></i>${v[0]}</span>`).join("");
@@ -343,6 +345,31 @@ fsBtn.onclick=()=>{
 };
 document.addEventListener("fullscreenchange",()=>{fsBtn.textContent=document.fullscreenElement?"⤢":"⛶"});
 
+// ---- ambient audio clip, provided alongside this page ----
+// Put your audio file next to index.html and name it "ambient.mp3" (or change the
+// src below to match your filename). Looped, soft volume, with a mute toggle.
+const muteBtn=document.getElementById("muteBtn");
+const ambientAudio=document.getElementById("ambientAudio");
+ambientAudio.volume=.45;
+let ambMuted=false,ambStarted=false;
+function startAmbience(){
+  if(ambStarted)return;ambStarted=true;
+  ambientAudio.muted=ambMuted;
+  ambientAudio.play().catch(()=>{/* file missing or blocked until a user gesture; mute button still works once it can play */});
+}
+function setAmbience(on){
+  ambMuted=!on;
+  ambientAudio.muted=ambMuted;
+  if(on&&ambStarted)ambientAudio.play().catch(()=>{});
+}
+muteBtn.onclick=()=>{
+  ambMuted=!ambMuted;
+  muteBtn.textContent=ambMuted?"🔇":"🔊";
+  muteBtn.setAttribute("aria-pressed",ambMuted?"true":"false");
+  muteBtn.title=ambMuted?"Unmute ambient sound":"Mute ambient sound";
+  setAmbience(!ambMuted);
+};
+
 // ---- lotus + flourish clip art (viewBox 132x40), used on both sides of "Om Shanti" and in the saved photo
 const ORN={
   lines:["M0 20 H50","M50 20 C57 20 61 13 56 10 C52 8 48 12 51 15"],
@@ -389,7 +416,7 @@ async function buildCapture(){
    c.fillStyle="rgba(217,200,255,.45)";const w=c.measureText(stamp).width;c.fillText(stamp,(W-w)/2,17)}
   // header
   c.font='400 25.6px Georgia,"Times New Roman",serif';if("letterSpacing" in c)c.letterSpacing=".5px";
-  gradText("See Your Selfie",W/2,44,[[0,"#ffd23f"],[.5,"#ff9ec7"],[1,"#7ad7ff"]]);
+  gradText("See Your Self",W/2,44,[[0,"#ffd23f"],[.5,"#ff9ec7"],[1,"#7ad7ff"]]);
   const hs=cl(14.4,W*.043,21.1);c.font=`italic 400 ${hs}px "Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif`;
   if("letterSpacing" in c)c.letterSpacing=".5px";
   c.fillStyle="#d9c8ff";{const t="See the original virtues shining from the soul.",w=c.measureText(t).width;c.fillText(t,(W-w)/2,72)}
@@ -436,9 +463,6 @@ async function buildCapture(){
   return out;
 }
 capBtn.onclick=()=>{
-  const email=prompt("Email address to send this to (leave blank to skip):");
-  if(email===null)return; // cancelled
-  const trimmedEmail=email.trim();
   const nd=new Date(),p2=n=>String(n).padStart(2,"0");
   const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   const defName=`SoulSelfie-${MON[nd.getMonth()]}-${p2(nd.getDate())}-${nd.getFullYear()}`; // local date, e.g. SoulSelfie-Oct-09-2026
@@ -451,16 +475,11 @@ capBtn.onclick=()=>{
     a.href=url;a.download=filename;
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
-    const subject=encodeURIComponent('"I The Soul" - Selfie');
-    const bodyText=`Thanks for Visiting us. Please feel free to check on our website BKNJ.ORG for more details and contact information. Thanks & Om Shanti ( I am a Peaceful Being)\n\n(Your photo was just downloaded as "${filename}" — please attach it here before sending; browsers don't allow pages to attach files automatically.)`;
-    const body=encodeURIComponent(bodyText);
-    const to=encodeURIComponent(trimmedEmail);
-    const gmailUrl=`https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
-    setTimeout(()=>{window.open(gmailUrl,"_blank")},400);
   },"image/png"));
 };
 
 go.onclick=async()=>{
+  startAmbience();
   try{
     const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false});
     vid.srcObject=s;await vid.play();live=true;go.style.display="none";msg.style.display="none";
