@@ -28,9 +28,12 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
 #stack>*{pointer-events:auto}
 #camRow{align-self:stretch;display:flex;justify-content:space-between;align-items:center;padding:0 max(14px,env(safe-area-inset-right)) 0 max(14px,env(safe-area-inset-left));margin-bottom:-4px;pointer-events:none!important}
 #camRow>*{pointer-events:auto}
-#camRight{display:flex;align-items:center;gap:10px}
+#camLeft,#camRight{display:flex;align-items:center;gap:10px}
 #capBtn{width:56px;height:56px;font-size:1.6rem;background:#ffffff26;border:1.5px solid #ffffff55;box-shadow:0 4px 18px #0006}
-#fsBtn,#muteBtn{width:44px;height:44px;font-size:1.2rem;box-shadow:0 4px 14px #0005}
+#fsBtn,#muteBtn,#refreshBtn{width:44px;height:44px;font-size:1.2rem;box-shadow:0 4px 14px #0005}
+#refreshBtn.spin{animation:spin .8s linear infinite}
+#refreshBtn:disabled{cursor:default}
+@keyframes spin{to{transform:rotate(360deg)}}
 #foot{position:absolute;left:0;right:0;bottom:0;height:var(--foot);padding:6px 12px max(8px,env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:radial-gradient(ellipse at 50% 0%,#2a1d52 0%,#150f2b 60%,#0d0b1a 100%);border-top:1px solid #ffffff1f;pointer-events:none}
 .omrow{display:flex;align-items:center;justify-content:center;gap:clamp(12px,4vw,34px);max-width:100%}
 .orn{flex:none;width:clamp(36px,9vw,110px);display:block;filter:drop-shadow(0 0 6px #ffc46a66)}
@@ -60,7 +63,10 @@ header p{margin:6px 0 0;font-family:"Palatino Linotype",Palatino,"Book Antiqua",
     <button id="go">Turn on camera</button>
     <div id="hint"></div>
     <div id="camRow">
-      <button id="fsBtn" class="iconbtn" title="Full screen">⛶</button>
+      <div id="camLeft">
+        <button id="fsBtn" class="iconbtn" title="Full screen">⛶</button>
+        <button id="refreshBtn" class="iconbtn" title="Refresh camera">⟳</button>
+      </div>
       <div id="camRight">
         <button id="muteBtn" class="iconbtn" title="Mute ambient sound" aria-pressed="false">🔊</button>
         <button id="capBtn" class="iconbtn" title="Capture photo">📷</button>
@@ -482,6 +488,29 @@ capBtn.onclick=()=>{
     document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),1000);
   },"image/png"));
+};
+
+// ---- refresh: restart the camera and reset the light/cutout without reloading the page
+const refreshBtn=document.getElementById("refreshBtn");
+refreshBtn.onclick=async()=>{
+  if(!vid.srcObject){location.reload();return} // camera never started: plain reload
+  refreshBtn.classList.add("spin");refreshBtn.disabled=true;
+  vid.srcObject.getTracks().forEach(t=>t.stop());vid.srcObject=null;
+  live=false;ready=false;segReady=false;lastTs=lastSegTs=lastChromaTs=-1;
+  resize(); // re-centres the light until the face is found again
+  try{
+    const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user",width:{ideal:1280},height:{ideal:720}},audio:false});
+    vid.srcObject=s;await vid.play();live=true;go.style.display="none";msg.style.display="none";
+    if(!landmarker&&!manual){
+      hint.style.display="block";hint.textContent="Loading face tracking...";
+      try{await loadTracker();hint.style.display="none"}
+      catch(e){manual=true;hint.textContent="Face tracking could not load (check your internet connection). Drag the light to your forehead."}
+    }
+  }catch(e){
+    msg.style.display="block";go.style.display="";
+    msg.textContent="Camera unavailable. Allow camera access in your browser settings, then tap Turn on camera again.";
+  }
+  refreshBtn.classList.remove("spin");refreshBtn.disabled=false;
 };
 
 go.onclick=async()=>{
